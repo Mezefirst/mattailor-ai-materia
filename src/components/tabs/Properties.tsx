@@ -88,14 +88,6 @@ export function Properties({ selectedMaterial, materials }: PropertiesProps) {
     return Math.round((strengthScore * 0.4 + densityScore * 0.3 + thermalScore * 0.3));
   };
 
-  const calculatePerformanceScore = (material: Material): number => {
-    const strengthScore = Math.min(material.mechanical.tensileStrength / 3000 * 100, 100);
-    const densityScore = Math.max(100 - (material.mechanical.density / 10000 * 100), 0);
-    const thermalScore = Math.min(material.thermal.thermalConductivity / 400 * 100, 100);
-    
-    return Math.round((strengthScore * 0.4 + densityScore * 0.3 + thermalScore * 0.3));
-  };
-
   const calculateCostScore = (material: Material): number => {
     const maxCost = 100; // USD/kg
     return Math.max(100 - (material.manufacturing.costPerKg / maxCost * 100), 0);
