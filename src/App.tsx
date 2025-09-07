@@ -1,3 +1,4 @@
+// MatTailor AI - Intelligent Material Discovery Platform
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Header } from '@/components/layout/Header';
