@@ -6,28 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Leaf, Recycle, Factory, Truck, Award, Globe } from '@phosphor-icons/react';
-
-interface Material {
-  id: string;
-  name: string;
-  type: string;
-  performanceScore: number;
-  costScore: number;
-  sustainabilityScore: number;
-  overallScore: number;
-  properties: {
-    tensileStrength: number;
-    density: number;
-    thermalConductivity: number;
-    electricalConductivity: number;
-  };
-  suppliers: Array<{
-    name: string;
-    region: string;
-    price: number;
-    availability: string;
-  }>;
-}
+import { Material } from '@/data/materials';
 
 interface SustainabilityProps {
   selectedMaterial: Material | null;
@@ -106,9 +85,9 @@ export function Sustainability({ selectedMaterial, materials }: SustainabilityPr
                 Sustainability Analysis: {selectedMaterial.name}
               </CardTitle>
               <div className="flex gap-2">
-                <Badge variant="secondary">{selectedMaterial.type}</Badge>
-                <Badge className={getSustainabilityGrade(selectedMaterial.sustainabilityScore).color}>
-                  Grade: {getSustainabilityGrade(selectedMaterial.sustainabilityScore).grade}
+                <Badge variant="secondary">{selectedMaterial.category}</Badge>
+                <Badge className={getSustainabilityGrade(selectedMaterial.sustainability.sustainabilityScore * 10).color}>
+                  Grade: {getSustainabilityGrade(selectedMaterial.sustainability.sustainabilityScore * 10).grade}
                 </Badge>
               </div>
             </CardHeader>
@@ -156,8 +135,8 @@ export function Sustainability({ selectedMaterial, materials }: SustainabilityPr
                         <span className="text-sm">Carbon Footprint</span>
                       </div>
                       <div className="text-right">
-                        <div className="font-medium">{sustainabilityMetrics.carbonFootprint.value} {sustainabilityMetrics.carbonFootprint.unit}</div>
-                        <Progress value={sustainabilityMetrics.carbonFootprint.score} className="w-16 h-2 mt-1" />
+                        <div className="font-medium">{selectedMaterial.sustainability.carbonFootprint} kg CO₂/kg</div>
+                        <Progress value={Math.max(0, 100 - (selectedMaterial.sustainability.carbonFootprint * 5))} className="w-16 h-2 mt-1" />
                       </div>
                     </div>
 
@@ -167,30 +146,36 @@ export function Sustainability({ selectedMaterial, materials }: SustainabilityPr
                         <span className="text-sm">Recyclability</span>
                       </div>
                       <div className="text-right">
-                        <div className="font-medium">{sustainabilityMetrics.recyclability.percentage}%</div>
-                        <Progress value={sustainabilityMetrics.recyclability.score} className="w-16 h-2 mt-1" />
+                        <Badge variant="outline" className="capitalize">
+                          {selectedMaterial.sustainability.recyclability}
+                        </Badge>
                       </div>
                     </div>
 
                     <div className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="flex items-center gap-2">
                         <Leaf className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">Renewable Content</span>
+                        <span className="text-sm">Sustainability Score</span>
                       </div>
                       <div className="text-right">
-                        <div className="font-medium">{sustainabilityMetrics.renewableContent.percentage}%</div>
-                        <Progress value={sustainabilityMetrics.renewableContent.score} className="w-16 h-2 mt-1" />
+                        <div className="font-medium">{selectedMaterial.sustainability.sustainabilityScore}/10</div>
+                        <Progress value={selectedMaterial.sustainability.sustainabilityScore * 10} className="w-16 h-2 mt-1" />
                       </div>
                     </div>
 
                     <div className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="flex items-center gap-2">
                         <Globe className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">Water Usage</span>
+                        <span className="text-sm">End-of-Life Options</span>
                       </div>
                       <div className="text-right">
-                        <div className="font-medium">{sustainabilityMetrics.waterUsage.value} {sustainabilityMetrics.waterUsage.unit}</div>
-                        <Progress value={sustainabilityMetrics.waterUsage.score} className="w-16 h-2 mt-1" />
+                        <div className="flex flex-wrap gap-1 justify-end">
+                          {selectedMaterial.sustainability.eolOptions.slice(0, 2).map((option, index) => (
+                            <Badge key={index} variant="outline" className="text-xs capitalize">
+                              {option}
+                            </Badge>
+                          ))}
+                        </div>
                       </div>
                     </div>
 

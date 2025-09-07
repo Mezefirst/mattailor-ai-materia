@@ -6,39 +6,19 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Robot, Lightning, Send, TestTube } from '@phosphor-icons/react';
 import { toast } from 'sonner';
-
-interface Material {
-  id: string;
-  name: string;
-  type: string;
-  performanceScore: number;
-  costScore: number;
-  sustainabilityScore: number;
-  overallScore: number;
-  properties: {
-    tensileStrength: number;
-    density: number;
-    thermalConductivity: number;
-    electricalConductivity: number;
-  };
-  suppliers: Array<{
-    name: string;
-    region: string;
-    price: number;
-    availability: string;
-  }>;
-}
+import { Material, MATERIALS_DATABASE, searchMaterials } from '@/data/materials';
 
 interface AIRecommendationProps {
   onMaterialsFound: (materials: Material[]) => void;
 }
 
 const exampleQueries = [
-  "Suggest a corrosion-resistant material for marine use under €30/kg",
-  "What's the best composite for lightweight packaging in cold climates?",
-  "Simulate a copper-aluminum alloy for electrical conductivity and cost",
-  "Find materials for aerospace applications with high strength-to-weight ratio",
-  "Recommend sustainable materials for food packaging applications"
+  "Find corrosion-resistant materials for marine use under $30/kg",
+  "What's the best lightweight composite for aerospace applications?",
+  "Recommend high-conductivity materials for electrical components",
+  "Find biocompatible materials for medical implants",
+  "Suggest sustainable materials for food packaging under $10/kg",
+  "High-temperature materials for gas turbine applications"
 ];
 
 export function AIRecommendation({ onMaterialsFound }: AIRecommendationProps) {
@@ -71,15 +51,28 @@ export function AIRecommendation({ onMaterialsFound }: AIRecommendationProps) {
     setQuery('');
 
     try {
-      // Simulate AI processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Use AI to analyze the query and recommend materials
+      const prompt = spark.llmPrompt`
+You are a materials science expert. Based on the user's query: "${currentQuery}"
+
+Analyze the query and recommend materials from the available database. Look for:
+1. Application requirements (marine, aerospace, electrical, medical, etc.)
+2. Property requirements (strength, conductivity, corrosion resistance, etc.)
+3. Cost constraints
+4. Environmental conditions
+5. Sustainability requirements
+
+Provide a technical analysis explaining why each material is suitable for the application.
+`;
+
+      const aiAnalysis = await spark.llm(prompt);
       
-      // Mock AI response based on query keywords
-      const materials = generateMockMaterials(currentQuery);
+      // Search for relevant materials based on query keywords
+      const materials = findRelevantMaterials(currentQuery);
       
       const aiResponse = {
         type: 'ai' as const,
-        content: generateAIResponse(currentQuery, materials),
+        content: `${aiAnalysis}\n\nBased on this analysis, here are my top recommendations:\n\n${generateMaterialSummary(materials)}`,
         materials
       };
       
@@ -98,167 +91,105 @@ export function AIRecommendation({ onMaterialsFound }: AIRecommendationProps) {
     }
   };
 
-  const generateMockMaterials = (query: string): Material[] => {
+  const findRelevantMaterials = (query: string): Material[] => {
     const queryLower = query.toLowerCase();
+    let materials: Material[] = [];
     
-    // Keywords to material mappings
-    const materials: Material[] = [];
+    // Extract cost constraint if mentioned
+    const costMatch = query.match(/under\s*\$?([0-9]+)/i);
+    const maxCost = costMatch ? parseInt(costMatch[1]) : undefined;
     
+    // Define search criteria based on keywords
+    const criteria: any = {};
+    if (maxCost) criteria.maxCost = maxCost;
+    
+    // Application-based filtering
     if (queryLower.includes('marine') || queryLower.includes('corrosion')) {
-      materials.push({
-        id: '1',
-        name: 'Stainless Steel 316L',
-        type: 'Stainless Steel',
-        performanceScore: 88,
-        costScore: 72,
-        sustainabilityScore: 85,
-        overallScore: 82,
-        properties: {
-          tensileStrength: 580,
-          density: 8.0,
-          thermalConductivity: 16,
-          electricalConductivity: 1.4
-        },
-        suppliers: [
-          { name: 'Marine Metals Ltd', region: 'Europe', price: 28, availability: 'In Stock' }
-        ]
-      });
+      materials = MATERIALS_DATABASE.filter(m => 
+        m.chemical.corrosionResistance === 'excellent' ||
+        m.applications.some(app => app.includes('marine'))
+      );
+    } else if (queryLower.includes('aerospace') || queryLower.includes('lightweight')) {
+      materials = MATERIALS_DATABASE.filter(m => 
+        m.mechanical.density < 5000 || // lightweight materials
+        m.applications.some(app => app.includes('aerospace'))
+      );
+    } else if (queryLower.includes('electrical') || queryLower.includes('conductiv')) {
+      materials = MATERIALS_DATABASE.filter(m => 
+        m.electrical.conductivity && m.electrical.conductivity > 1e6 ||
+        m.applications.some(app => app.includes('electrical'))
+      );
+    } else if (queryLower.includes('medical') || queryLower.includes('biocompat')) {
+      materials = MATERIALS_DATABASE.filter(m => 
+        m.applications.some(app => app.includes('medical') || app.includes('implant'))
+      );
+    } else if (queryLower.includes('packaging') || queryLower.includes('food')) {
+      materials = MATERIALS_DATABASE.filter(m => 
+        m.applications.some(app => app.includes('food') || app.includes('packaging'))
+      );
+    } else if (queryLower.includes('high.temp') || queryLower.includes('turbine')) {
+      materials = MATERIALS_DATABASE.filter(m => 
+        m.thermal.maxServiceTemp > 500 ||
+        m.applications.some(app => app.includes('turbine') || app.includes('high-temperature'))
+      );
+    } else {
+      // General search across all materials
+      materials = searchMaterials(query);
     }
     
-    if (queryLower.includes('lightweight') || queryLower.includes('aerospace')) {
-      materials.push({
-        id: '2',
-        name: 'Carbon Fiber Composite',
-        type: 'Composite',
-        performanceScore: 95,
-        costScore: 45,
-        sustainabilityScore: 60,
-        overallScore: 67,
-        properties: {
-          tensileStrength: 3500,
-          density: 1.6,
-          thermalConductivity: 100,
-          electricalConductivity: 0.01
-        },
-        suppliers: [
-          { name: 'Aerospace Composites Inc', region: 'North America', price: 120, availability: 'Custom Order' }
-        ]
-      });
-      
-      materials.push({
-        id: '3',
-        name: 'Titanium Alloy Ti-6Al-4V',
-        type: 'Titanium Alloy',
-        performanceScore: 92,
-        costScore: 35,
-        sustainabilityScore: 75,
-        overallScore: 67,
-        properties: {
-          tensileStrength: 1170,
-          density: 4.43,
-          thermalConductivity: 7,
-          electricalConductivity: 0.6
-        },
-        suppliers: [
-          { name: 'Titan Materials Corp', region: 'Europe', price: 85, availability: 'Limited Stock' }
-        ]
-      });
+    // Apply cost filter if specified
+    if (maxCost) {
+      materials = materials.filter(m => m.manufacturing.costPerKg <= maxCost);
     }
     
-    if (queryLower.includes('electrical') || queryLower.includes('copper') || queryLower.includes('aluminum')) {
-      materials.push({
-        id: '4',
-        name: 'Aluminum Alloy 6061',
-        type: 'Aluminum Alloy',
-        performanceScore: 75,
-        costScore: 90,
-        sustainabilityScore: 88,
-        overallScore: 84,
-        properties: {
-          tensileStrength: 310,
-          density: 2.7,
-          thermalConductivity: 167,
-          electricalConductivity: 38
-        },
-        suppliers: [
-          { name: 'Euro Aluminum Solutions', region: 'Europe', price: 12, availability: 'In Stock' }
-        ]
-      });
-    }
+    // Calculate scores and sort by relevance
+    const scoredMaterials = materials.map(material => ({
+      ...material,
+      relevanceScore: calculateRelevanceScore(material, queryLower)
+    }));
     
-    if (queryLower.includes('packaging') || queryLower.includes('food')) {
-      materials.push({
-        id: '5',
-        name: 'PET (Recycled)',
-        type: 'Polymer',
-        performanceScore: 70,
-        costScore: 95,
-        sustainabilityScore: 92,
-        overallScore: 86,
-        properties: {
-          tensileStrength: 55,
-          density: 1.38,
-          thermalConductivity: 0.15,
-          electricalConductivity: 0.00001
-        },
-        suppliers: [
-          { name: 'GreenPack Materials', region: 'Europe', price: 3.5, availability: 'In Stock' }
-        ]
-      });
-    }
-    
-    // Always include at least one material
-    if (materials.length === 0) {
-      materials.push({
-        id: '6',
-        name: 'General Purpose Steel',
-        type: 'Carbon Steel',
-        performanceScore: 80,
-        costScore: 85,
-        sustainabilityScore: 70,
-        overallScore: 78,
-        properties: {
-          tensileStrength: 400,
-          density: 7.85,
-          thermalConductivity: 50,
-          electricalConductivity: 10
-        },
-        suppliers: [
-          { name: 'Industrial Steel Supply', region: 'Europe', price: 8, availability: 'In Stock' }
-        ]
-      });
-    }
-    
-    return materials;
+    // Sort by relevance and return top 5
+    return scoredMaterials
+      .sort((a, b) => b.relevanceScore - a.relevanceScore)
+      .slice(0, 5);
   };
 
-  const generateAIResponse = (query: string, materials: Material[]): string => {
-    const queryLower = query.toLowerCase();
+  const calculateRelevanceScore = (material: Material, query: string): number => {
+    let score = 0;
     
-    let response = `Based on your requirements, I've identified ${materials.length} optimal material${materials.length > 1 ? 's' : ''} for your application:\n\n`;
+    // Application match
+    const appMatches = material.applications.filter(app => 
+      query.includes(app.toLowerCase()) || app.toLowerCase().includes(query)
+    );
+    score += appMatches.length * 20;
     
-    materials.forEach((material, index) => {
-      response += `${index + 1}. **${material.name}** (${material.type})\n`;
-      response += `   - Overall Score: ${material.overallScore}%\n`;
-      response += `   - Performance: ${material.performanceScore}%, Cost: ${material.costScore}%, Sustainability: ${material.sustainabilityScore}%\n`;
-      response += `   - Price: €${material.suppliers[0]?.price || 'N/A'}/kg\n\n`;
-    });
+    // Category match
+    if (query.includes(material.category)) score += 15;
+    if (query.includes(material.subcategory)) score += 10;
     
-    if (queryLower.includes('marine') || queryLower.includes('corrosion')) {
-      response += "For marine applications, I prioritized corrosion resistance and durability in saltwater environments.";
-    } else if (queryLower.includes('lightweight') || queryLower.includes('aerospace')) {
-      response += "For aerospace applications, I focused on high strength-to-weight ratios and temperature resistance.";
-    } else if (queryLower.includes('electrical')) {
-      response += "For electrical applications, I prioritized thermal and electrical conductivity properties.";
-    } else if (queryLower.includes('packaging')) {
-      response += "For packaging applications, I considered food safety, sustainability, and cost-effectiveness.";
-    } else {
-      response += "These materials balance performance, cost, and environmental impact for general engineering applications.";
-    }
+    // Property relevance
+    if (query.includes('strong') && material.mechanical.tensileStrength > 1000) score += 10;
+    if (query.includes('light') && material.mechanical.density < 3000) score += 10;
+    if (query.includes('conduct') && material.electrical.conductivity && material.electrical.conductivity > 1e6) score += 10;
+    if (query.includes('corrosion') && material.chemical.corrosionResistance === 'excellent') score += 15;
+    if (query.includes('sustain') && material.sustainability.sustainabilityScore > 7) score += 10;
     
-    response += "\n\nWould you like me to simulate specific properties, compare materials, or provide more details about manufacturing processes?";
-    
-    return response;
+    return score;
+  };
+
+  const generateMaterialSummary = (materials: Material[]): string => {
+    return materials.map((material, index) => {
+      const performanceScore = Math.min(material.mechanical.tensileStrength / 3000 * 100, 100);
+      const costScore = Math.max(100 - (material.manufacturing.costPerKg / 100 * 100), 0);
+      const sustainabilityScore = material.sustainability.sustainabilityScore * 10;
+      
+      return `${index + 1}. **${material.name}** (${material.category})
+   - Applications: ${material.applications.slice(0, 3).join(', ')}
+   - Cost: $${material.manufacturing.costPerKg}/kg
+   - Key Properties: ${material.mechanical.tensileStrength} MPa tensile strength, ${(material.mechanical.density/1000).toFixed(2)} g/cm³ density
+   - Sustainability Score: ${material.sustainability.sustainabilityScore}/10
+   - Top Supplier: ${material.suppliers[0]?.name} (${material.suppliers[0]?.region})`;
+    }).join('\n\n');
   };
 
   const useExampleQuery = (example: string) => {
@@ -294,14 +225,17 @@ export function AIRecommendation({ onMaterialsFound }: AIRecommendationProps) {
                           <div key={material.id} className="p-2 border rounded bg-background/50">
                             <div className="font-medium text-sm">{material.name}</div>
                             <div className="flex gap-2 mt-1">
-                              <Badge variant="outline" className="text-xs">{material.type}</Badge>
-                              <Badge variant="secondary" className="text-xs">Score: {material.overallScore}%</Badge>
+                              <Badge variant="outline" className="text-xs">{material.category}</Badge>
+                              <Badge variant="secondary" className="text-xs">${material.manufacturing.costPerKg}/kg</Badge>
                             </div>
                             <div className="flex gap-4 mt-2 text-xs">
                               <div className="flex items-center gap-1">
-                                <span>Performance:</span>
-                                <Progress value={material.performanceScore} className="w-12 h-1" />
-                                <span>{material.performanceScore}%</span>
+                                <span>Tensile:</span>
+                                <span>{material.mechanical.tensileStrength} MPa</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span>Sustainability:</span>
+                                <span>{material.sustainability.sustainabilityScore}/10</span>
                               </div>
                             </div>
                           </div>

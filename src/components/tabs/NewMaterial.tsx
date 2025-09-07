@@ -9,28 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { TestTube, Atom, Lightning, FlaskConical } from '@phosphor-icons/react';
 import { toast } from 'sonner';
-
-interface Material {
-  id: string;
-  name: string;
-  type: string;
-  performanceScore: number;
-  costScore: number;
-  sustainabilityScore: number;
-  overallScore: number;
-  properties: {
-    tensileStrength: number;
-    density: number;
-    thermalConductivity: number;
-    electricalConductivity: number;
-  };
-  suppliers: Array<{
-    name: string;
-    region: string;
-    price: number;
-    availability: string;
-  }>;
-}
+import { Material } from '@/data/materials';
 
 interface NewMaterialProps {
   onMaterialCreated: (material: Material) => void;
@@ -139,23 +118,65 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
     const newMaterial: Material = {
       id: Date.now().toString(),
       name: materialName,
-      type: 'Custom Alloy',
-      performanceScore: Math.round(simulationResults.performanceScore),
-      costScore: Math.round(simulationResults.costScore),
-      sustainabilityScore: Math.round(simulationResults.sustainabilityScore),
-      overallScore: Math.round(simulationResults.overallScore),
-      properties: {
+      category: 'metal',
+      subcategory: 'custom alloy',
+      
+      mechanical: {
         tensileStrength: Math.round(simulationResults.properties.tensileStrength),
-        density: Number(simulationResults.properties.density.toFixed(2)),
-        thermalConductivity: Math.round(simulationResults.properties.thermalConductivity),
-        electricalConductivity: Math.round(simulationResults.properties.electricalConductivity),
+        yieldStrength: Math.round(simulationResults.properties.tensileStrength * 0.8),
+        elasticModulus: 200,
+        hardness: 250,
+        density: Math.round(simulationResults.properties.density * 1000),
+        poissonRatio: 0.3,
+        fatigueLimit: Math.round(simulationResults.properties.tensileStrength * 0.4),
+        fractureToughness: 50
       },
+      
+      thermal: {
+        meltingPoint: 1500,
+        thermalConductivity: Math.round(simulationResults.properties.thermalConductivity),
+        thermalExpansion: 12,
+        specificHeat: 500,
+        maxServiceTemp: 400
+      },
+      
+      electrical: {
+        resistivity: 1e-6,
+        conductivity: simulationResults.properties.electricalConductivity * 1e6
+      },
+      
+      chemical: {
+        corrosionResistance: 'good',
+        oxidationResistance: 'fair',
+        chemicalCompatibility: ['water', 'mild acids'],
+        phLevel: { min: 5, max: 9 }
+      },
+      
+      manufacturing: {
+        machinability: 'good',
+        weldability: 'good',
+        formability: 'fair',
+        costPerKg: Math.round(15 + Math.random() * 20),
+        availability: 'limited'
+      },
+      
+      sustainability: {
+        recyclability: 'good',
+        carbonFootprint: 8.0,
+        sustainabilityScore: Math.round(simulationResults.sustainabilityScore / 10),
+        eolOptions: ['recycling', 'remelting']
+      },
+      
+      applications: ['custom engineering', 'prototyping', 'specialized components'],
+      advantages: ['custom properties', 'tailored composition'],
+      limitations: ['limited testing', 'prototype stage', 'requires validation'],
+      
       suppliers: [
         {
           name: 'Advanced Materials Co.',
-          region: 'Europe',
-          price: Math.round(15 + Math.random() * 20),
-          availability: 'Custom Order',
+          region: 'North America',
+          minOrderQty: 50,
+          leadTime: 60,
         },
       ],
     };

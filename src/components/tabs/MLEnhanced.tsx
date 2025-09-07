@@ -6,28 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Brain, TrendingUp, Target, Zap } from '@phosphor-icons/react';
 import { toast } from 'sonner';
-
-interface Material {
-  id: string;
-  name: string;
-  type: string;
-  performanceScore: number;
-  costScore: number;
-  sustainabilityScore: number;
-  overallScore: number;
-  properties: {
-    tensileStrength: number;
-    density: number;
-    thermalConductivity: number;
-    electricalConductivity: number;
-  };
-  suppliers: Array<{
-    name: string;
-    region: string;
-    price: number;
-    availability: string;
-  }>;
-}
+import { Material } from '@/data/materials';
 
 interface MLEnhancedProps {
   materials: Material[];

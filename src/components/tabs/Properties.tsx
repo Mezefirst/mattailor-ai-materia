@@ -6,28 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
 import { TestTube, ChartLine, Thermometer, Lightning, Atom, FlaskConical } from '@phosphor-icons/react';
-
-interface Material {
-  id: string;
-  name: string;
-  type: string;
-  performanceScore: number;
-  costScore: number;
-  sustainabilityScore: number;
-  overallScore: number;
-  properties: {
-    tensileStrength: number;
-    density: number;
-    thermalConductivity: number;
-    electricalConductivity: number;
-  };
-  suppliers: Array<{
-    name: string;
-    region: string;
-    price: number;
-    availability: string;
-  }>;
-}
+import { Material } from '@/data/materials';
 
 interface PropertiesProps {
   selectedMaterial: Material | null;
@@ -61,35 +40,48 @@ export function Properties({ selectedMaterial, materials }: PropertiesProps) {
   const getRadarData = (material: Material) => [
     {
       property: 'Strength',
-      value: Math.min(100, (material.properties.tensileStrength / 1000) * 100),
+      value: Math.min(100, (material.mechanical.tensileStrength / 3000) * 100),
       fullMark: 100
     },
     {
       property: 'Lightweight',
-      value: Math.max(0, 100 - (material.properties.density * 15)),
+      value: Math.max(0, 100 - ((material.mechanical.density / 1000) * 10)),
       fullMark: 100
     },
     {
       property: 'Thermal Cond.',
-      value: Math.min(100, (material.properties.thermalConductivity / 200) * 100),
+      value: Math.min(100, (material.thermal.thermalConductivity / 400) * 100),
       fullMark: 100
     },
     {
-      property: 'Electrical Cond.',
-      value: Math.min(100, (material.properties.electricalConductivity / 60) * 100),
+      property: 'Corr. Resist.',
+      value: { poor: 25, fair: 50, good: 75, excellent: 100 }[material.chemical.corrosionResistance],
       fullMark: 100
     },
     {
       property: 'Cost Efficiency',
-      value: material.costScore,
+      value: Math.max(0, 100 - (material.manufacturing.costPerKg / 100 * 100)),
       fullMark: 100
     },
     {
       property: 'Sustainability',
-      value: material.sustainabilityScore,
+      value: material.sustainability.sustainabilityScore * 10,
       fullMark: 100
     }
   ];
+
+  const calculatePerformanceScore = (material: Material): number => {
+    const strengthScore = Math.min(material.mechanical.tensileStrength / 3000 * 100, 100);
+    const densityScore = Math.max(100 - (material.mechanical.density / 10000 * 100), 0);
+    const thermalScore = Math.min(material.thermal.thermalConductivity / 400 * 100, 100);
+    
+    return Math.round((strengthScore * 0.4 + densityScore * 0.3 + thermalScore * 0.3));
+  };
+
+  const calculateCostScore = (material: Material): number => {
+    const maxCost = 100; // USD/kg
+    return Math.max(100 - (material.manufacturing.costPerKg / maxCost * 100), 0);
+  };
 
   const comparisonMaterial = materials.find(m => m.id === selectedComparison);
 
@@ -112,7 +104,7 @@ export function Properties({ selectedMaterial, materials }: PropertiesProps) {
                 <FlaskConical className="h-5 w-5" />
                 Material Properties: {selectedMaterial.name}
               </CardTitle>
-              <Badge variant="secondary">{selectedMaterial.type}</Badge>
+              <Badge variant="secondary">{selectedMaterial.category}</Badge>
             </CardHeader>
             <CardContent>
               <div className="grid gap-6 md:grid-cols-2">
@@ -125,10 +117,10 @@ export function Properties({ selectedMaterial, materials }: PropertiesProps) {
                         <span className="text-sm">Tensile Strength</span>
                       </div>
                       <div className="text-right">
-                        <div className="font-medium">{selectedMaterial.properties.tensileStrength} MPa</div>
+                        <div className="font-medium">{selectedMaterial.mechanical.tensileStrength} MPa</div>
                         <div className="text-xs text-muted-foreground">
-                          {selectedMaterial.properties.tensileStrength > 500 ? 'High' : 
-                           selectedMaterial.properties.tensileStrength > 200 ? 'Medium' : 'Low'}
+                          {selectedMaterial.mechanical.tensileStrength > 1000 ? 'High' : 
+                           selectedMaterial.mechanical.tensileStrength > 500 ? 'Medium' : 'Low'}
                         </div>
                       </div>
                     </div>
@@ -139,10 +131,10 @@ export function Properties({ selectedMaterial, materials }: PropertiesProps) {
                         <span className="text-sm">Density</span>
                       </div>
                       <div className="text-right">
-                        <div className="font-medium">{selectedMaterial.properties.density} g/cm³</div>
+                        <div className="font-medium">{(selectedMaterial.mechanical.density / 1000).toFixed(2)} g/cm³</div>
                         <div className="text-xs text-muted-foreground">
-                          {selectedMaterial.properties.density < 3 ? 'Lightweight' : 
-                           selectedMaterial.properties.density < 6 ? 'Medium' : 'Heavy'}
+                          {selectedMaterial.mechanical.density < 3000 ? 'Lightweight' : 
+                           selectedMaterial.mechanical.density < 6000 ? 'Medium' : 'Heavy'}
                         </div>
                       </div>
                     </div>
@@ -153,10 +145,10 @@ export function Properties({ selectedMaterial, materials }: PropertiesProps) {
                         <span className="text-sm">Thermal Conductivity</span>
                       </div>
                       <div className="text-right">
-                        <div className="font-medium">{selectedMaterial.properties.thermalConductivity} W/mK</div>
+                        <div className="font-medium">{selectedMaterial.thermal.thermalConductivity} W/mK</div>
                         <div className="text-xs text-muted-foreground">
-                          {selectedMaterial.properties.thermalConductivity > 100 ? 'High' : 
-                           selectedMaterial.properties.thermalConductivity > 20 ? 'Medium' : 'Low'}
+                          {selectedMaterial.thermal.thermalConductivity > 100 ? 'High' : 
+                           selectedMaterial.thermal.thermalConductivity > 20 ? 'Medium' : 'Low'}
                         </div>
                       </div>
                     </div>
@@ -164,14 +156,26 @@ export function Properties({ selectedMaterial, materials }: PropertiesProps) {
                     <div className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="flex items-center gap-2">
                         <ChartLine className="h-4 w-4 text-accent" />
-                        <span className="text-sm">Electrical Conductivity</span>
+                        <span className="text-sm">Max Service Temp</span>
                       </div>
                       <div className="text-right">
-                        <div className="font-medium">{selectedMaterial.properties.electricalConductivity} MS/m</div>
+                        <div className="font-medium">{selectedMaterial.thermal.maxServiceTemp}°C</div>
                         <div className="text-xs text-muted-foreground">
-                          {selectedMaterial.properties.electricalConductivity > 30 ? 'High' : 
-                           selectedMaterial.properties.electricalConductivity > 1 ? 'Medium' : 'Low'}
+                          {selectedMaterial.thermal.maxServiceTemp > 800 ? 'High Temp' : 
+                           selectedMaterial.thermal.maxServiceTemp > 300 ? 'Medium Temp' : 'Low Temp'}
                         </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <Lightning className="h-4 w-4 text-performance" />
+                        <span className="text-sm">Corrosion Resistance</span>
+                      </div>
+                      <div className="text-right">
+                        <Badge variant="outline" className="capitalize">
+                          {selectedMaterial.chemical.corrosionResistance}
+                        </Badge>
                       </div>
                     </div>
                   </div>
@@ -294,7 +298,7 @@ export function Properties({ selectedMaterial, materials }: PropertiesProps) {
                           .filter(m => m.id !== selectedMaterial.id)
                           .map((material) => (
                             <SelectItem key={material.id} value={material.id}>
-                              {material.name} - {material.type}
+                              {material.name} - {material.category}
                             </SelectItem>
                           ))}
                       </SelectContent>
@@ -309,22 +313,22 @@ export function Properties({ selectedMaterial, materials }: PropertiesProps) {
                           <div className="flex justify-between items-center">
                             <span className="text-sm">Performance</span>
                             <div className="flex items-center gap-2">
-                              <Progress value={selectedMaterial.performanceScore} className="w-20" />
-                              <span className="text-sm w-8">{selectedMaterial.performanceScore}%</span>
+                              <Progress value={calculatePerformanceScore(selectedMaterial)} className="w-20" />
+                              <span className="text-sm w-8">{calculatePerformanceScore(selectedMaterial)}%</span>
                             </div>
                           </div>
                           <div className="flex justify-between items-center">
                             <span className="text-sm">Cost</span>
                             <div className="flex items-center gap-2">
-                              <Progress value={selectedMaterial.costScore} className="w-20" />
-                              <span className="text-sm w-8">{selectedMaterial.costScore}%</span>
+                              <Progress value={calculateCostScore(selectedMaterial)} className="w-20" />
+                              <span className="text-sm w-8">{Math.round(calculateCostScore(selectedMaterial))}%</span>
                             </div>
                           </div>
                           <div className="flex justify-between items-center">
                             <span className="text-sm">Sustainability</span>
                             <div className="flex items-center gap-2">
-                              <Progress value={selectedMaterial.sustainabilityScore} className="w-20" />
-                              <span className="text-sm w-8">{selectedMaterial.sustainabilityScore}%</span>
+                              <Progress value={selectedMaterial.sustainability.sustainabilityScore * 10} className="w-20" />
+                              <span className="text-sm w-8">{selectedMaterial.sustainability.sustainabilityScore}/10</span>
                             </div>
                           </div>
                         </div>
@@ -336,22 +340,22 @@ export function Properties({ selectedMaterial, materials }: PropertiesProps) {
                           <div className="flex justify-between items-center">
                             <span className="text-sm">Performance</span>
                             <div className="flex items-center gap-2">
-                              <Progress value={comparisonMaterial.performanceScore} className="w-20" />
-                              <span className="text-sm w-8">{comparisonMaterial.performanceScore}%</span>
+                              <Progress value={calculatePerformanceScore(comparisonMaterial)} className="w-20" />
+                              <span className="text-sm w-8">{calculatePerformanceScore(comparisonMaterial)}%</span>
                             </div>
                           </div>
                           <div className="flex justify-between items-center">
                             <span className="text-sm">Cost</span>
                             <div className="flex items-center gap-2">
-                              <Progress value={comparisonMaterial.costScore} className="w-20" />
-                              <span className="text-sm w-8">{comparisonMaterial.costScore}%</span>
+                              <Progress value={calculateCostScore(comparisonMaterial)} className="w-20" />
+                              <span className="text-sm w-8">{Math.round(calculateCostScore(comparisonMaterial))}%</span>
                             </div>
                           </div>
                           <div className="flex justify-between items-center">
                             <span className="text-sm">Sustainability</span>
                             <div className="flex items-center gap-2">
-                              <Progress value={comparisonMaterial.sustainabilityScore} className="w-20" />
-                              <span className="text-sm w-8">{comparisonMaterial.sustainabilityScore}%</span>
+                              <Progress value={comparisonMaterial.sustainability.sustainabilityScore * 10} className="w-20" />
+                              <span className="text-sm w-8">{comparisonMaterial.sustainability.sustainabilityScore}/10</span>
                             </div>
                           </div>
                         </div>
