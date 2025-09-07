@@ -27,6 +27,7 @@ export interface APICredentials {
 
 export class MaterialDataSourceManager {
   private credentials: APICredentials = {};
+  private isInitialized = false;
 
   constructor() {
     // Load API keys from secure storage
@@ -39,22 +40,43 @@ export class MaterialDataSourceManager {
       if (stored) {
         this.credentials = stored;
       }
+      this.isInitialized = true;
     } catch (error) {
       console.warn('Could not load API credentials:', error);
+      // Initialize with empty credentials to prevent errors
+      this.credentials = {};
+      this.isInitialized = true;
+    }
+  }
+
+  async waitForInitialization() {
+    while (!this.isInitialized) {
+      await new Promise(resolve => setTimeout(resolve, 50));
     }
   }
 
   async saveCredentials(credentials: Partial<APICredentials>) {
-    this.credentials = { ...this.credentials, ...credentials };
-    await spark.kv.set('api-credentials', this.credentials);
+    try {
+      this.credentials = { ...this.credentials, ...credentials };
+      await spark.kv.set('api-credentials', this.credentials);
+    } catch (error) {
+      console.error('Failed to save API credentials:', error);
+      throw new Error('Could not save API credentials securely');
+    }
   }
 
   async clearCredentials() {
-    this.credentials = {};
-    await spark.kv.delete('api-credentials');
+    try {
+      this.credentials = {};
+      await spark.kv.delete('api-credentials');
+    } catch (error) {
+      console.error('Failed to clear API credentials:', error);
+      throw new Error('Could not clear API credentials');
+    }
   }
 
-  getCredentialStatus() {
+  async getCredentialStatus() {
+    await this.waitForInitialization();
     return {
       matweb: !!this.credentials.matwebApiKey,
       materialsProject: !!this.credentials.materialsProjectApiKey

@@ -22,12 +22,40 @@ export function APIConfig({ onCredentialsUpdated }: APIConfigProps) {
   const [showKeys, setShowKeys] = useState({ matweb: false, materialsProject: false });
 
   useEffect(() => {
-    updateStatus();
+    const initializeStatus = async () => {
+      // Wait a moment for the materialDataSources to initialize
+      setTimeout(updateStatus, 100);
+    };
+    initializeStatus();
   }, []);
 
-  const updateStatus = () => {
-    const status = materialDataSources.getCredentialStatus();
-    setCredentialStatus(status);
+  const updateStatus = async () => {
+    try {
+      const status = await materialDataSources.getCredentialStatus();
+      setCredentialStatus(status);
+    } catch (error) {
+      console.warn('Could not get credential status:', error);
+      setCredentialStatus({ matweb: false, materialsProject: false });
+    }
+  };
+
+  const handleTestConnection = async (source: 'matweb' | 'materialsProject') => {
+    setIsLoading(true);
+    try {
+      let testQuery;
+      if (source === 'matweb') {
+        testQuery = { material: 'steel' };
+        await materialDataSources.searchMatWeb(testQuery);
+      } else {
+        testQuery = { elements: ['Fe'] };
+        await materialDataSources.searchMaterialsProject(testQuery);
+      }
+      toast.success(`${source === 'matweb' ? 'MatWeb' : 'Materials Project'} connection successful`);
+    } catch (error) {
+      toast.error(`Connection failed: ${(error as Error).message}`);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSaveCredentials = async () => {
@@ -140,14 +168,26 @@ export function APIConfig({ onCredentialsUpdated }: APIConfigProps) {
                   Access comprehensive material property database
                 </p>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => window.open('https://www.matweb.com/reference/api.aspx', '_blank')}
-              >
-                <ExternalLink className="w-3 h-3 mr-1" />
-                Get API Key
-              </Button>
+              <div className="flex gap-2">
+                {credentialStatus.matweb && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleTestConnection('matweb')}
+                    disabled={isLoading}
+                  >
+                    Test Connection
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.open('https://www.matweb.com/reference/api.aspx', '_blank')}
+                >
+                  <ExternalLink className="w-3 h-3 mr-1" />
+                  Get API Key
+                </Button>
+              </div>
             </div>
             
             <div className="space-y-2">
@@ -185,14 +225,26 @@ export function APIConfig({ onCredentialsUpdated }: APIConfigProps) {
                   Access computational materials science database
                 </p>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => window.open('https://next-gen.materialsproject.org/api', '_blank')}
-              >
-                <ExternalLink className="w-3 h-3 mr-1" />
-                Get API Key
-              </Button>
+              <div className="flex gap-2">
+                {credentialStatus.materialsProject && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleTestConnection('materialsProject')}
+                    disabled={isLoading}
+                  >
+                    Test Connection
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.open('https://next-gen.materialsproject.org/api', '_blank')}
+                >
+                  <ExternalLink className="w-3 h-3 mr-1" />
+                  Get API Key
+                </Button>
+              </div>
             </div>
             
             <div className="space-y-2">

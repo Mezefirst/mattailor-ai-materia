@@ -112,25 +112,46 @@ Traditional material selection is:
 **Success Criteria**: Works offline for 80% of core features
 
 ### 🔗 External Database Integration
-**Functionality**: Secure API connections to MatWeb and Materials Project databases
-**Purpose**: Access comprehensive material data from authoritative sources
+**Functionality**: Secure API connections to MatWeb and Materials Project databases providing access to 150,000+ real material properties
+**Purpose**: Transform the platform from limited sample data to comprehensive material intelligence
 **Success Criteria**: 
 - Real-time data retrieval in <5 seconds
 - Secure credential management with encryption
 - 99% API uptime and error handling
 - Unified search across multiple data sources
+- Seamless integration with AI recommendation engine
 
 #### Supported Data Sources
-- **MatWeb**: 150,000+ commercial materials with comprehensive property data
-- **Materials Project**: Computational materials database with DFT-calculated properties
+- **MatWeb**: 150,000+ commercial materials with comprehensive mechanical, thermal, electrical, and chemical properties
+  - Real-world commercial materials with supplier information
+  - Standardized test data and material specifications
+  - Manufacturing and processing guidelines
+- **Materials Project**: Computational materials database with DFT-calculated properties  
+  - 150,000+ computed crystalline inorganic compounds
+  - Electronic structure and thermodynamic properties
+  - Novel material discovery and property prediction
 - **Future Sources**: Extensible architecture for additional database integrations
 
+#### API Configuration Management
+- **Settings Interface**: Dedicated configuration panel for API credentials
+- **Key Management**: Secure storage and validation of API keys
+- **Connection Status**: Real-time monitoring of database connectivity
+- **Error Handling**: Clear feedback for authentication and connection issues
+- **Multi-source Support**: Ability to use multiple databases simultaneously
+
 #### API Features
-- **Secure Authentication**: Encrypted storage of API credentials
-- **Unified Search**: Single interface for querying multiple databases
-- **Data Mapping**: Automatic conversion between different data formats
-- **Cache Management**: Intelligent caching for improved performance
-- **Error Recovery**: Graceful handling of API failures and rate limits
+- **Secure Authentication**: Encrypted storage of API credentials using browser secure storage
+- **Unified Search**: Single interface for querying multiple databases with combined results
+- **Data Mapping**: Automatic conversion between different data formats into unified material schema
+- **Cache Management**: Intelligent caching for improved performance and reduced API calls
+- **Error Recovery**: Graceful handling of API failures, rate limits, and partial data
+- **Progressive Enhancement**: Core functionality works without external APIs, enhanced when available
+
+#### Integration Points
+- **AI Recommendations**: External data enhances AI suggestions with real-world materials
+- **Property Simulation**: Validation of simulated properties against real material data
+- **Supplier Integration**: Direct connection to material suppliers through MatWeb data
+- **Search Enhancement**: Combined search across local database and external sources
 
 ---
 

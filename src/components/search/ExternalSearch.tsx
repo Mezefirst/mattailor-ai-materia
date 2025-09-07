@@ -28,6 +28,20 @@ export function ExternalSearch({ onMaterialsFound }: ExternalSearchProps) {
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<ExternalMaterial[]>([]);
   const [selectedMaterials, setSelectedMaterials] = useState<Set<string>>(new Set());
+  const [credentialStatus, setCredentialStatus] = useState({ matweb: false, materialsProject: false });
+
+  useEffect(() => {
+    const updateStatus = async () => {
+      try {
+        const status = await materialDataSources.getCredentialStatus();
+        setCredentialStatus(status);
+      } catch (error) {
+        console.warn('Could not get credential status:', error);
+        setCredentialStatus({ matweb: false, materialsProject: false });
+      }
+    };
+    updateStatus();
+  }, []);
 
   const elementOptions = [
     'H', 'He', 'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne',
@@ -122,7 +136,6 @@ export function ExternalSearch({ onMaterialsFound }: ExternalSearchProps) {
     }
   };
 
-  const credentialStatus = materialDataSources.getCredentialStatus();
   const hasAnyCredentials = credentialStatus.matweb || credentialStatus.materialsProject;
 
   if (!hasAnyCredentials) {

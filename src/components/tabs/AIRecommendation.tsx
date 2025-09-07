@@ -9,7 +9,7 @@ import { Robot, Lightning, Send, TestTube, Database } from '@phosphor-icons/reac
 import { toast } from 'sonner';
 import { Material, MATERIALS_DATABASE, searchMaterials } from '@/data/materials';
 import { ExternalSearch } from '@/components/search/ExternalSearch';
-import { ExternalMaterial } from '@/services/materialDataSources';
+import { ExternalMaterial, materialDataSources } from '@/services/materialDataSources';
 
 interface AIRecommendationProps {
   onMaterialsFound: (materials: Material[]) => void;
@@ -70,8 +70,8 @@ Provide a technical analysis explaining why each material is suitable for the ap
 
       const aiAnalysis = await spark.llm(prompt);
       
-      // Search for relevant materials based on query keywords
-      const materials = findRelevantMaterials(currentQuery);
+      // Search for relevant materials based on query keywords (now async)
+      const materials = await findRelevantMaterials(currentQuery);
       
       const aiResponse = {
         type: 'ai' as const,
@@ -94,7 +94,7 @@ Provide a technical analysis explaining why each material is suitable for the ap
     }
   };
 
-  const findRelevantMaterials = (query: string): Material[] => {
+  const findRelevantMaterials = async (query: string): Promise<Material[]> => {
     const queryLower = query.toLowerCase();
     let materials: Material[] = [];
     
@@ -106,7 +106,7 @@ Provide a technical analysis explaining why each material is suitable for the ap
     const criteria: any = {};
     if (maxCost) criteria.maxCost = maxCost;
     
-    // Application-based filtering
+    // Application-based filtering for local database
     if (queryLower.includes('marine') || queryLower.includes('corrosion')) {
       materials = MATERIALS_DATABASE.filter(m => 
         m.chemical.corrosionResistance === 'excellent' ||
@@ -144,6 +144,55 @@ Provide a technical analysis explaining why each material is suitable for the ap
     if (maxCost) {
       materials = materials.filter(m => m.manufacturing.costPerKg <= maxCost);
     }
+
+    // Try to enhance with external data sources if available
+    try {
+      const status = await materialDataSources.getCredentialStatus();
+      if (status.matweb || status.materialsProject) {
+        // Extract search parameters for external APIs
+        const externalQuery: any = {};
+        
+        // Extract material type keywords
+        const materialKeywords = ['steel', 'aluminum', 'titanium', 'carbon', 'polymer', 'ceramic', 'composite'];
+        for (const keyword of materialKeywords) {
+          if (queryLower.includes(keyword)) {
+            externalQuery.material = keyword;
+            break;
+          }
+        }
+        
+        // Extract category keywords
+        const categoryMap: { [key: string]: string } = {
+          'metal': 'Metal',
+          'polymer': 'Polymer', 
+          'plastic': 'Polymer',
+          'ceramic': 'Ceramic',
+          'composite': 'Composite',
+          'semiconductor': 'Semiconductor'
+        };
+        
+        for (const [keyword, category] of Object.entries(categoryMap)) {
+          if (queryLower.includes(keyword)) {
+            externalQuery.category = category;
+            break;
+          }
+        }
+
+        // Search external databases
+        const externalMaterials = await materialDataSources.searchAllSources(externalQuery);
+        
+        // Convert and merge external materials
+        if (externalMaterials.length > 0) {
+          const convertedExternal = convertExternalMaterials(externalMaterials);
+          materials = [...materials, ...convertedExternal];
+          
+          toast.info(`Enhanced search with ${externalMaterials.length} materials from external databases`);
+        }
+      }
+    } catch (error) {
+      console.warn('Could not enhance search with external data:', error);
+      // Continue with local results only
+    }
     
     // Calculate scores and sort by relevance
     const scoredMaterials = materials.map(material => ({
@@ -151,10 +200,10 @@ Provide a technical analysis explaining why each material is suitable for the ap
       relevanceScore: calculateRelevanceScore(material, queryLower)
     }));
     
-    // Sort by relevance and return top 5
+    // Sort by relevance and return top 8 (more now that we have external data)
     return scoredMaterials
       .sort((a, b) => b.relevanceScore - a.relevanceScore)
-      .slice(0, 5);
+      .slice(0, 8);
   };
 
   const calculateRelevanceScore = (material: Material, query: string): number => {
