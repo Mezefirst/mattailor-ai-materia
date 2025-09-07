@@ -8,6 +8,7 @@ import { AIRecommendation } from '@/components/tabs/AIRecommendation';
 import { MLEnhanced } from '@/components/tabs/MLEnhanced';
 import { Properties } from '@/components/tabs/Properties';
 import { Sustainability } from '@/components/tabs/Sustainability';
+import { ExternalSearch } from '@/components/tabs/ExternalSearch';
 import { Settings } from '@/components/tabs/Settings';
 import { useKV } from '@github/spark/hooks';
 
@@ -22,13 +23,14 @@ function App() {
       
       <main className="container mx-auto px-4 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-7 mb-8">
+          <TabsList className="grid w-full grid-cols-8 mb-8">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="new-material">New Material</TabsTrigger>
             <TabsTrigger value="ai-recommendation">AI Recommendation</TabsTrigger>
             <TabsTrigger value="ml-enhanced">ML Enhanced</TabsTrigger>
             <TabsTrigger value="properties">Properties</TabsTrigger>
             <TabsTrigger value="sustainability">Sustainability</TabsTrigger>
+            <TabsTrigger value="external-search">External Search</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
           
@@ -70,6 +72,12 @@ function App() {
             <Sustainability 
               selectedMaterial={selectedMaterial}
               materials={materials}
+            />
+          </TabsContent>
+          
+          <TabsContent value="external-search">
+            <ExternalSearch 
+              onMaterialsFound={(newMaterials) => setMaterials(newMaterials)}
             />
           </TabsContent>
           
