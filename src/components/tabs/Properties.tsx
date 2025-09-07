@@ -88,44 +88,6 @@ export function Properties({ selectedMaterial, materials }: PropertiesProps) {
     return Math.round((strengthScore * 0.4 + densityScore * 0.3 + thermalScore * 0.3));
   };
 
-  const calculateCostScore = (material: Material): number => {
-    const maxCost = 100; // USD/kg
-    return Math.max(100 - (material.manufacturing.costPerKg / maxCost * 100), 0);
-  };
-
-  const getRadarData = (material: Material) => [
-    {
-      property: 'Strength',
-      value: Math.min(100, (material.mechanical.tensileStrength / 3000) * 100),
-      fullMark: 100
-    },
-    {
-      property: 'Lightweight',
-      value: Math.max(0, 100 - ((material.mechanical.density / 1000) * 10)),
-      fullMark: 100
-    },
-    {
-      property: 'Thermal Cond.',
-      value: Math.min(100, (material.thermal.thermalConductivity / 400) * 100),
-      fullMark: 100
-    },
-    {
-      property: 'Corr. Resist.',
-      value: { poor: 25, fair: 50, good: 75, excellent: 100 }[material.chemical.corrosionResistance],
-      fullMark: 100
-    },
-    {
-      property: 'Cost Efficiency',
-      value: Math.max(0, 100 - (material.manufacturing.costPerKg / 100 * 100)),
-      fullMark: 100
-    },
-    {
-      property: 'Sustainability',
-      value: material.sustainability.sustainabilityScore * 10,
-      fullMark: 100
-    }
-  ];
-
   const calculatePerformanceScore = (material: Material): number => {
     const strengthScore = Math.min(material.mechanical.tensileStrength / 3000 * 100, 100);
     const densityScore = Math.max(100 - (material.mechanical.density / 10000 * 100), 0);
