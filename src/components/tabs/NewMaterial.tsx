@@ -7,32 +7,22 @@ import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { TestTube, Atom, Lightning, FlaskConical } from '@phosphor-icons/react';
+import { TestTube, Atom, Lightning, FlaskConical, Table } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import { Material } from '@/data/materials';
+import { PeriodicTable, Element } from '@/components/periodic/PeriodicTable';
 
 interface NewMaterialProps {
   onMaterialCreated: (material: Material) => void;
 }
 
-const elements = [
-  { symbol: 'Fe', name: 'Iron', category: 'Metal' },
-  { symbol: 'Al', name: 'Aluminum', category: 'Metal' },
-  { symbol: 'Cu', name: 'Copper', category: 'Metal' },
-  { symbol: 'Ti', name: 'Titanium', category: 'Metal' },
-  { symbol: 'C', name: 'Carbon', category: 'Nonmetal' },
-  { symbol: 'Si', name: 'Silicon', category: 'Nonmetal' },
-  { symbol: 'Ni', name: 'Nickel', category: 'Metal' },
-  { symbol: 'Cr', name: 'Chromium', category: 'Metal' },
-];
-
 export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
   const [materialName, setMaterialName] = useState('');
-  const [selectedElements, setSelectedElements] = useState<Array<{element: typeof elements[0], percentage: number}>>([]);
+  const [selectedElements, setSelectedElements] = useState<Array<{element: Element, percentage: number}>>([]);
   const [isSimulating, setIsSimulating] = useState(false);
   const [simulationResults, setSimulationResults] = useState<any>(null);
 
-  const addElement = (element: typeof elements[0]) => {
+  const addElement = (element: Element) => {
     if (selectedElements.find(e => e.element.symbol === element.symbol)) {
       toast.error('Element already added');
       return;
@@ -45,6 +35,10 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
     }
     
     setSelectedElements(prev => [...prev, { element, percentage: Math.min(remaining, 20) }]);
+  };
+
+  const removeElementFromComposition = (symbol: string) => {
+    setSelectedElements(prev => prev.filter(item => item.element.symbol !== symbol));
   };
 
   const updatePercentage = (index: number, percentage: number) => {
@@ -198,6 +192,10 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
             <FlaskConical className="h-5 w-5" />
             Design Custom Material
           </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Create custom materials by selecting elements from the periodic table and adjusting their composition. 
+            The AI will predict material properties based on your element selection and percentages.
+          </p>
         </CardHeader>
         <CardContent className="space-y-6">
           <div>
@@ -211,39 +209,52 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
           </div>
 
           <div>
-            <Label>Element Selection</Label>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
-              {elements.map((element) => (
-                <Button
-                  key={element.symbol}
-                  variant="outline"
-                  size="sm"
-                  onClick={() => addElement(element)}
-                  disabled={selectedElements.some(e => e.element.symbol === element.symbol)}
-                  className="justify-start"
-                >
-                  <Atom className="mr-2 h-3 w-3" />
-                  <span className="font-mono font-bold">{element.symbol}</span>
-                  <span className="ml-1 text-xs">{element.name}</span>
-                </Button>
-              ))}
+            <div className="flex items-center gap-2 mb-4">
+              <Table className="h-5 w-5" />
+              <Label className="text-base font-medium">Periodic Table - Element Selection</Label>
             </div>
+            <div className="mb-4 p-3 bg-muted/50 rounded-lg">
+              <p className="text-sm text-muted-foreground mb-2">
+                <strong>Select base elements:</strong> Click on elements to add them to your material composition. 
+                Elements are color-coded by category to help you choose appropriate base materials.
+              </p>
+              <div className="flex flex-wrap gap-2 text-xs">
+                <span><strong>Tip:</strong> Common alloy bases include Fe (steel), Al (aluminum alloys), Cu (brass/bronze), Ti (titanium alloys)</span>
+              </div>
+            </div>
+            <PeriodicTable
+              selectedElements={selectedElements.map(e => e.element.symbol)}
+              onElementSelect={addElement}
+              onElementDeselect={removeElementFromComposition}
+            />
           </div>
 
           {selectedElements.length > 0 && (
             <div>
-              <Label>Composition ({totalPercentage.toFixed(1)}%)</Label>
+              <div className="flex items-center justify-between mb-2">
+                <Label>Material Composition ({totalPercentage.toFixed(1)}%)</Label>
+                <Badge 
+                  variant={Math.abs(totalPercentage - 100) < 0.1 ? "default" : "destructive"}
+                >
+                  {Math.abs(totalPercentage - 100) < 0.1 ? "Balanced" : `${(100 - totalPercentage).toFixed(1)}% remaining`}
+                </Badge>
+              </div>
               <div className="space-y-3 mt-2">
                 {selectedElements.map((item, index) => (
-                  <div key={item.element.symbol} className="flex items-center gap-4 p-3 border rounded-lg">
+                  <div key={item.element.symbol} className="flex items-center gap-4 p-3 border rounded-lg bg-card">
                     <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <Badge variant="outline">
+                      <Badge variant="outline" className="font-mono">
                         {item.element.symbol}
                       </Badge>
-                      <span className="text-sm truncate">{item.element.name}</span>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium">{item.element.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          Atomic #: {item.element.atomicNumber} | Category: {item.element.category.replace('-', ' ')}
+                        </span>
+                      </div>
                     </div>
                     
-                    <div className="flex items-center gap-2 flex-1">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
                       <Slider
                         value={[item.percentage]}
                         onValueChange={([value]) => updatePercentage(index, value)}
@@ -251,7 +262,7 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
                         step={0.1}
                         className="flex-1"
                       />
-                      <span className="text-sm font-mono w-12">
+                      <span className="text-sm font-mono w-16 text-right">
                         {item.percentage.toFixed(1)}%
                       </span>
                     </div>
@@ -260,19 +271,12 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
                       variant="ghost"
                       size="sm"
                       onClick={() => removeElement(index)}
+                      className="text-destructive hover:text-destructive"
                     >
                       ×
                     </Button>
                   </div>
                 ))}
-                
-                <div className="text-center">
-                  <Badge 
-                    variant={Math.abs(totalPercentage - 100) < 0.1 ? "default" : "destructive"}
-                  >
-                    Total: {totalPercentage.toFixed(1)}%
-                  </Badge>
-                </div>
               </div>
             </div>
           )}

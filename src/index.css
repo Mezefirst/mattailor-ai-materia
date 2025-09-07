@@ -74,3 +74,8 @@ body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   @apply bg-background text-foreground antialiased;
 }
+
+/* Custom grid for periodic table */
+.grid-cols-18 {
+  grid-template-columns: repeat(18, minmax(0, 1fr));
+}
