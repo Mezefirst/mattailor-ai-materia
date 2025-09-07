@@ -77,10 +77,24 @@ Traditional material selection is:
 **Purpose**: Eliminate the expertise barrier in material selection
 **Success Criteria**: 85% of queries return relevant results within 3 seconds
 
-### 🧪 Property Simulation System
-**Functionality**: ML models predict properties for existing and novel materials
-**Purpose**: Enable rapid prototyping without physical testing
-**Success Criteria**: 80% accuracy for predicted vs. measured properties
+### 🧪 Advanced Property Simulation System
+**Functionality**: Comprehensive AI-powered simulation engine for predicting material properties under custom conditions
+**Purpose**: Enable rapid prototyping and optimization without extensive physical testing
+**Success Criteria**: 
+- 85% accuracy for predicted vs. measured properties
+- Support for custom material composition simulation
+- Real-time property prediction under varying environmental conditions
+- Confidence intervals and uncertainty quantification for all predictions
+
+#### Simulation Capabilities
+- **Mechanical Properties**: Tensile strength, yield strength, elastic modulus, hardness, ductility, fatigue life
+- **Thermal Properties**: Thermal conductivity, thermal expansion, specific heat, thermal shock resistance  
+- **Electrical Properties**: Resistivity, conductivity, dielectric properties, band gap calculations
+- **Chemical Properties**: Corrosion resistance, oxidation behavior, chemical stability, pH tolerance
+- **Custom Material Creation**: Element composition tool with processing method considerations
+- **Environmental Conditions**: Temperature, pressure, humidity, chemical environment simulation
+- **Physics-Based Models**: Machine learning enhanced with fundamental materials science equations
+- **Uncertainty Analysis**: Statistical confidence intervals and prediction reliability metrics
 
 ### 📊 Trade-off Analysis Dashboard
 **Functionality**: Multi-criteria comparison with visual trade-off charts
