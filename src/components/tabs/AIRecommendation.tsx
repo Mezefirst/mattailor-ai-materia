@@ -4,9 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Robot, Lightning, Send, TestTube } from '@phosphor-icons/react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Robot, Lightning, Send, TestTube, Database } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import { Material, MATERIALS_DATABASE, searchMaterials } from '@/data/materials';
+import { ExternalSearch } from '@/components/search/ExternalSearch';
+import { ExternalMaterial } from '@/services/materialDataSources';
 
 interface AIRecommendationProps {
   onMaterialsFound: (materials: Material[]) => void;
@@ -192,12 +195,85 @@ Provide a technical analysis explaining why each material is suitable for the ap
     }).join('\n\n');
   };
 
+  // Convert external materials to internal format
+  const convertExternalMaterials = (externalMaterials: ExternalMaterial[]): Material[] => {
+    return externalMaterials.map(ext => ({
+      id: ext.id,
+      name: ext.name,
+      category: ext.category as any,
+      subcategory: ext.category,
+      composition: ext.composition,
+      mechanical: {
+        tensileStrength: ext.properties.find(p => p.name === 'Tensile Strength')?.value as number || 0,
+        yieldStrength: ext.properties.find(p => p.name === 'Yield Strength')?.value as number || 0,
+        elasticModulus: ext.properties.find(p => p.name === 'Elastic Modulus')?.value as number || 0,
+        density: ext.properties.find(p => p.name === 'Density')?.value as number || 0
+      },
+      thermal: {
+        thermalConductivity: ext.properties.find(p => p.name === 'Thermal Conductivity')?.value as number || 0,
+        specificHeat: ext.properties.find(p => p.name === 'Specific Heat')?.value as number || 0,
+        meltingPoint: ext.properties.find(p => p.name === 'Melting Point')?.value as number || 0,
+        maxServiceTemp: 0
+      },
+      electrical: {
+        conductivity: ext.properties.find(p => p.name === 'Electrical Conductivity')?.value as number || 0,
+        resistivity: 0,
+        dielectricConstant: 0
+      },
+      chemical: {
+        corrosionResistance: 'moderate',
+        chemicalCompatibility: [],
+        oxidationResistance: 'moderate'
+      },
+      sustainability: {
+        sustainabilityScore: 7,
+        recyclability: 'high',
+        carbonFootprint: 5,
+        renewableContent: 0
+      },
+      manufacturing: {
+        processability: 'moderate',
+        costPerKg: 50, // Default value
+        leadTime: 14,
+        minOrderQuantity: 100
+      },
+      suppliers: ext.suppliers?.map(name => ({ 
+        name, 
+        region: 'Global', 
+        contact: '', 
+        certifications: [] 
+      })) || [],
+      applications: [ext.description || ''],
+      standards: [],
+      notes: `Imported from ${ext.source}`
+    }));
+  };
+
+  const handleExternalMaterialsFound = (externalMaterials: ExternalMaterial[]) => {
+    const convertedMaterials = convertExternalMaterials(externalMaterials);
+    onMaterialsFound(convertedMaterials);
+    toast.success(`Imported ${convertedMaterials.length} materials from external databases`);
+  };
+
   const useExampleQuery = (example: string) => {
     setQuery(example);
   };
 
   return (
     <div className="space-y-6">
+      <Tabs defaultValue="ai-chat" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="ai-chat" className="flex items-center gap-2">
+            <Robot className="w-4 h-4" />
+            AI Chat
+          </TabsTrigger>
+          <TabsTrigger value="external-search" className="flex items-center gap-2">
+            <Database className="w-4 h-4" />
+            External Databases
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="ai-chat" className="space-y-6 mt-6">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -309,6 +385,12 @@ Provide a technical analysis explaining why each material is suitable for the ap
           </div>
         </CardContent>
       </Card>
+        </TabsContent>
+
+        <TabsContent value="external-search" className="mt-6">
+          <ExternalSearch onMaterialsFound={handleExternalMaterialsFound} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
