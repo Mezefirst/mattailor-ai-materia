@@ -1,6 +1,6 @@
 // MatTailor AI - Intelligent Material Discovery Platform
 import React from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Header } from '@/components/layout/Header';
 import { Overview } from '@/components/tabs/Overview';
 import { NewMaterial } from '@/components/tabs/NewMaterial';
@@ -17,74 +17,94 @@ function App() {
   const [materials, setMaterials] = useKV('materials', []);
   const [selectedMaterial, setSelectedMaterial] = useKV('selected-material', null);
 
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'overview':
+        return (
+          <Overview 
+            materials={materials}
+            selectedMaterial={selectedMaterial}
+            onSelectMaterial={setSelectedMaterial}
+          />
+        );
+      case 'new-material':
+        return (
+          <NewMaterial 
+            onMaterialCreated={(material) => setMaterials(prev => [...prev, material])}
+          />
+        );
+      case 'ai-recommendation':
+        return (
+          <AIRecommendation 
+            onMaterialsFound={(newMaterials) => setMaterials(newMaterials)}
+          />
+        );
+      case 'ml-enhanced':
+        return (
+          <MLEnhanced 
+            materials={materials}
+            onMaterialsUpdated={setMaterials}
+          />
+        );
+      case 'properties':
+        return (
+          <Properties 
+            selectedMaterial={selectedMaterial}
+            materials={materials}
+          />
+        );
+      case 'sustainability':
+        return (
+          <Sustainability 
+            selectedMaterial={selectedMaterial}
+            materials={materials}
+          />
+        );
+      case 'external-search':
+        return (
+          <ExternalSearch 
+            onMaterialsFound={(newMaterials) => setMaterials(newMaterials)}
+          />
+        );
+      case 'settings':
+        return <Settings />;
+      default:
+        return (
+          <Overview 
+            materials={materials}
+            selectedMaterial={selectedMaterial}
+            onSelectMaterial={setSelectedMaterial}
+          />
+        );
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
       
       <main className="container mx-auto px-4 py-8">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-8 mb-8">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="new-material">New Material</TabsTrigger>
-            <TabsTrigger value="ai-recommendation">AI Recommendation</TabsTrigger>
-            <TabsTrigger value="ml-enhanced">ML Enhanced</TabsTrigger>
-            <TabsTrigger value="properties">Properties</TabsTrigger>
-            <TabsTrigger value="sustainability">Sustainability</TabsTrigger>
-            <TabsTrigger value="external-search">External Search</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="overview">
-            <Overview 
-              materials={materials}
-              selectedMaterial={selectedMaterial}
-              onSelectMaterial={setSelectedMaterial}
-            />
-          </TabsContent>
-          
-          <TabsContent value="new-material">
-            <NewMaterial 
-              onMaterialCreated={(material) => setMaterials(prev => [...prev, material])}
-            />
-          </TabsContent>
-          
-          <TabsContent value="ai-recommendation">
-            <AIRecommendation 
-              onMaterialsFound={(newMaterials) => setMaterials(newMaterials)}
-            />
-          </TabsContent>
-          
-          <TabsContent value="ml-enhanced">
-            <MLEnhanced 
-              materials={materials}
-              onMaterialsUpdated={setMaterials}
-            />
-          </TabsContent>
-          
-          <TabsContent value="properties">
-            <Properties 
-              selectedMaterial={selectedMaterial}
-              materials={materials}
-            />
-          </TabsContent>
-          
-          <TabsContent value="sustainability">
-            <Sustainability 
-              selectedMaterial={selectedMaterial}
-              materials={materials}
-            />
-          </TabsContent>
-          
-          <TabsContent value="external-search">
-            <ExternalSearch 
-              onMaterialsFound={(newMaterials) => setMaterials(newMaterials)}
-            />
-          </TabsContent>
-          
-          <TabsContent value="settings">
-            <Settings />
-          </TabsContent>
-        </Tabs>
+        <div className="mb-8">
+          <Select value={activeTab} onValueChange={setActiveTab}>
+            <SelectTrigger className="w-full max-w-md">
+              <SelectValue placeholder="Select a section" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="overview">Overview</SelectItem>
+              <SelectItem value="new-material">New Material</SelectItem>
+              <SelectItem value="ai-recommendation">AI Recommendation</SelectItem>
+              <SelectItem value="ml-enhanced">ML Enhanced</SelectItem>
+              <SelectItem value="properties">Properties</SelectItem>
+              <SelectItem value="sustainability">Sustainability</SelectItem>
+              <SelectItem value="external-search">External Search</SelectItem>
+              <SelectItem value="settings">Settings</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="w-full">
+          {renderContent()}
+        </div>
       </main>
     </div>
   );
