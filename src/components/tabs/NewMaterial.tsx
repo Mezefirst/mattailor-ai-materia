@@ -13,6 +13,7 @@ import { Material } from '@/data/materials';
 import { PeriodicTable, Element } from '@/components/periodic/PeriodicTable';
 import { CompositionChart } from '@/components/charts/CompositionChart';
 import { RealTimeProperties } from '@/components/prediction/RealTimeProperties';
+import { AdvancedPropertyPrediction } from '@/components/prediction/AdvancedPropertyPrediction';
 import { usePropertyPrediction } from '@/hooks/usePropertyPrediction';
 import { useTranslation } from '@/lib/i18n';
 
@@ -39,7 +40,27 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
     }
     
     const currentTotal = selectedElements.reduce((sum, e) => sum + e.percentage, 0);
-    const defaultPercentage = Math.min(20, 100 - currentTotal);
+    let defaultPercentage = Math.min(20, 100 - currentTotal);
+    
+    // Intelligent default percentages based on element type and common alloys
+    const intelligentDefaults = {
+      'Fe': Math.min(70, 100 - currentTotal), // Iron as major component
+      'Al': Math.min(60, 100 - currentTotal), // Aluminum as major component
+      'Cu': Math.min(50, 100 - currentTotal), // Copper as major component
+      'Ti': Math.min(40, 100 - currentTotal), // Titanium as major component
+      'C': Math.min(2, 100 - currentTotal),   // Carbon as minor alloying element
+      'Cr': Math.min(18, 100 - currentTotal), // Chromium for stainless steel
+      'Ni': Math.min(8, 100 - currentTotal),  // Nickel for stainless steel
+      'Mn': Math.min(2, 100 - currentTotal),  // Manganese as minor element
+      'Si': Math.min(1, 100 - currentTotal),  // Silicon as minor element
+      'Mo': Math.min(4, 100 - currentTotal),  // Molybdenum for high-strength steels
+      'V': Math.min(1, 100 - currentTotal),   // Vanadium for tool steels
+      'W': Math.min(3, 100 - currentTotal),   // Tungsten for high-speed steels
+    };
+    
+    if (intelligentDefaults[element.symbol as keyof typeof intelligentDefaults]) {
+      defaultPercentage = intelligentDefaults[element.symbol as keyof typeof intelligentDefaults];
+    }
     
     if (currentTotal >= 100) {
       toast.error(t.common.error, {
@@ -51,6 +72,30 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
     const newElement = { element, percentage: defaultPercentage };
     const newElements = [...selectedElements, newElement];
     const newTotal = newElements.reduce((sum, e) => sum + e.percentage, 0);
+    
+    // Smart composition suggestions
+    const getCompositionAdvice = (elements: typeof newElements) => {
+      const symbols = elements.map(e => e.element.symbol);
+      const hasIron = symbols.includes('Fe');
+      const hasCarbon = symbols.includes('C');
+      const hasChromium = symbols.includes('Cr');
+      const hasNickel = symbols.includes('Ni');
+      const hasAluminum = symbols.includes('Al');
+      
+      if (hasIron && hasCarbon && !hasChromium) {
+        return "💡 Consider adding Chromium (Cr) to create stainless steel with enhanced corrosion resistance.";
+      }
+      if (hasIron && hasChromium && !hasNickel) {
+        return "💡 Adding Nickel (Ni) would create austenitic stainless steel with better ductility.";
+      }
+      if (hasAluminum && symbols.length === 1) {
+        return "💡 Consider adding Silicon (Si) or Magnesium (Mg) for aerospace-grade aluminum alloys.";
+      }
+      if (hasIron && symbols.length === 1) {
+        return "💡 Add Carbon (C) for steel, or Chromium (Cr) for stainless properties.";
+      }
+      return null;
+    };
     
     // If adding this element would exceed 100%, suggest normalization
     if (newTotal > 100) {
@@ -71,7 +116,15 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
       });
     } else {
       setSelectedElements(newElements);
-      toast.success(`${element.symbol} (${element.name}) added with ${defaultPercentage}%`);
+      
+      const advice = getCompositionAdvice(newElements);
+      if (advice) {
+        toast.success(`${element.symbol} (${element.name}) added with ${defaultPercentage}%`, {
+          description: advice
+        });
+      } else {
+        toast.success(`${element.symbol} (${element.name}) added with ${defaultPercentage}%`);
+      }
     }
   };
 
@@ -98,6 +151,130 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
     toast.success('Equal distribution applied', {
       description: `Each element now has ${equalPercentage}%`
     });
+  };
+
+  const optimizeComposition = async () => {
+    if (selectedElements.length === 0) {
+      toast.error('No elements to optimize');
+      return;
+    }
+
+    setIsSimulating(true);
+    
+    try {
+      // Use AI to suggest optimal composition ratios
+      const prompt = spark.llmPrompt`
+      Optimize the composition of a material with the following elements: ${selectedElements.map(e => e.element.symbol).join(', ')}
+      
+      Current composition: ${selectedElements.map(e => `${e.element.symbol}: ${e.percentage}%`).join(', ')}
+      
+      Goals:
+      1. Maximize mechanical strength (tensile strength, hardness)
+      2. Maintain good ductility and toughness
+      3. Optimize for manufacturability
+      4. Consider cost-effectiveness
+      5. Ensure chemical stability
+      
+      Base the optimization on:
+      - Known successful alloy compositions
+      - Phase diagrams and metallurgical principles
+      - Element interactions and synergies
+      - Industrial best practices
+      
+      Return optimized percentages as JSON: {"elements": [{"symbol": "Fe", "percentage": 85.2}, ...]}
+      Ensure percentages sum to exactly 100%.
+      `;
+
+      const result = await spark.llm(prompt, 'gpt-4o', true);
+      const optimized = JSON.parse(result);
+      
+      if (optimized.elements && Array.isArray(optimized.elements)) {
+        const newComposition = selectedElements.map(item => {
+          const optimizedElement = optimized.elements.find((e: any) => e.symbol === item.element.symbol);
+          return {
+            ...item,
+            percentage: optimizedElement ? optimizedElement.percentage : item.percentage
+          };
+        });
+        
+        setSelectedElements(newComposition);
+        toast.success('Composition optimized using AI recommendations', {
+          description: 'Ratios adjusted for enhanced properties and manufacturability'
+        });
+      }
+    } catch (error) {
+      // Fallback to rule-based optimization
+      const optimizedComposition = selectedElements.map(item => {
+        const symbol = item.element.symbol;
+        
+        // Rule-based optimization based on common alloy practices
+        if (symbol === 'Fe' && selectedElements.some(e => e.element.symbol === 'C')) {
+          return { ...item, percentage: 98.5 }; // Carbon steel
+        } else if (symbol === 'C' && selectedElements.some(e => e.element.symbol === 'Fe')) {
+          return { ...item, percentage: 0.8 }; // Medium carbon steel
+        } else if (symbol === 'Cr' && selectedElements.some(e => e.element.symbol === 'Fe')) {
+          return { ...item, percentage: 18.0 }; // Stainless steel
+        } else if (symbol === 'Ni' && selectedElements.some(e => e.element.symbol === 'Fe')) {
+          return { ...item, percentage: 8.0 }; // Austenitic stainless
+        } else if (symbol === 'Al' && selectedElements.length === 1) {
+          return { ...item, percentage: 100 }; // Pure aluminum
+        }
+        
+        return item;
+      });
+      
+      // Normalize if needed
+      const total = optimizedComposition.reduce((sum, e) => sum + e.percentage, 0);
+      if (total !== 100) {
+        const normalized = optimizedComposition.map(item => ({
+          ...item,
+          percentage: parseFloat(((item.percentage / total) * 100).toFixed(2))
+        }));
+        setSelectedElements(normalized);
+      } else {
+        setSelectedElements(optimizedComposition);
+      }
+      
+      toast.success('Composition optimized using metallurgical principles');
+    } finally {
+      setIsSimulating(false);
+    }
+  };
+
+  const suggestAlloyPresets = () => {
+    const presets = [
+      {
+        name: "304 Stainless Steel",
+        elements: [
+          { symbol: 'Fe', percentage: 70.0 },
+          { symbol: 'Cr', percentage: 18.0 },
+          { symbol: 'Ni', percentage: 8.0 },
+          { symbol: 'Mn', percentage: 2.0 },
+          { symbol: 'Si', percentage: 1.0 },
+          { symbol: 'C', percentage: 0.08 }
+        ]
+      },
+      {
+        name: "6061 Aluminum Alloy",
+        elements: [
+          { symbol: 'Al', percentage: 97.9 },
+          { symbol: 'Mg', percentage: 1.0 },
+          { symbol: 'Si', percentage: 0.6 },
+          { symbol: 'Cu', percentage: 0.3 },
+          { symbol: 'Cr', percentage: 0.2 }
+        ]
+      },
+      {
+        name: "Ti-6Al-4V",
+        elements: [
+          { symbol: 'Ti', percentage: 90.0 },
+          { symbol: 'Al', percentage: 6.0 },
+          { symbol: 'V', percentage: 4.0 }
+        ]
+      }
+    ];
+    
+    return presets;
   };
 
   const removeElement = (index: number) => {
@@ -343,6 +520,39 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
               <div className="flex flex-wrap gap-2 text-xs">
                 <span><strong>Tip:</strong> Common alloy bases include Fe (steel), Al (aluminum alloys), Cu (brass/bronze), Ti (titanium alloys)</span>
               </div>
+              
+              {/* Quick Preset Selection */}
+              <div className="mt-3 pt-3 border-t">
+                <p className="text-sm font-medium mb-2">🚀 Quick Start Presets:</p>
+                <div className="flex flex-wrap gap-2">
+                  {suggestAlloyPresets().map((preset) => (
+                    <Button
+                      key={preset.name}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        // Find corresponding Element objects for each preset
+                        const presetElements = preset.elements.map(pe => {
+                          // You'll need to access the periodic table data here
+                          // For now, let's create a simple element structure
+                          const element = {
+                            symbol: pe.symbol,
+                            name: pe.symbol, // Simplified for now
+                            atomicNumber: 0, // Would need to be looked up
+                            category: 'metal' as const
+                          };
+                          return { element, percentage: pe.percentage };
+                        });
+                        setSelectedElements(presetElements);
+                        toast.success(`Applied ${preset.name} composition`);
+                      }}
+                      className="text-xs"
+                    >
+                      {preset.name}
+                    </Button>
+                  ))}
+                </div>
+              </div>
             </div>
             <PeriodicTable
               selectedElements={selectedElements.map(e => e.element.symbol)}
@@ -378,6 +588,21 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
                       title="Distribute equally among all elements"
                     >
                       ⚖️ Equal
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={optimizeComposition}
+                      className="flex items-center gap-1"
+                      disabled={selectedElements.length === 0 || isSimulating}
+                      title="AI-powered composition optimization"
+                    >
+                      {isSimulating ? (
+                        <Lightning className="w-4 h-4 animate-pulse" />
+                      ) : (
+                        <Atom className="w-4 h-4" />
+                      )}
+                      {isSimulating ? 'Optimizing...' : 'AI Optimize'}
                     </Button>
                     <Badge 
                       variant={Math.abs(totalPercentage - 100) < 0.1 ? "default" : totalPercentage > 100 ? "destructive" : "secondary"}
@@ -512,6 +737,13 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
       <RealTimeProperties 
         prediction={prediction}
         isCalculating={isCalculating}
+      />
+
+      {/* Advanced Property Analysis */}
+      <AdvancedPropertyPrediction 
+        prediction={prediction}
+        isCalculating={isCalculating}
+        composition={selectedElements}
       />
 
       {simulationResults && (
