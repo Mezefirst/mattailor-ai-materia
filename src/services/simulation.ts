@@ -58,6 +58,7 @@ export interface PredictedProperties {
     hardness: number;
     ductility: number;
     toughness: number;
+    creepRate?: number; // per year
     fatigueLife?: number;
   };
   thermal?: {
@@ -66,6 +67,7 @@ export interface PredictedProperties {
     specificHeat: number;
     thermalDiffusivity: number;
     thermalShock: number;
+    thermalStress?: number; // MPa
   };
   electrical?: {
     resistivity: number;
@@ -164,7 +166,7 @@ export class MaterialSimulator {
   }
 
   /**
-   * Simulate mechanical properties using ML models and empirical correlations
+   * Simulate mechanical properties using advanced temperature and pressure models
    */
   private async simulateMechanicalProperties(
     baseProperties: any, 
@@ -176,23 +178,29 @@ export class MaterialSimulator {
     recommendations: string[];
     warnings: string[];
   }> {
-    const tempFactor = this.getTemperatureFactor(conditions.temperature);
+    // Advanced temperature and pressure corrections
+    const tempFactor = this.getAdvancedTemperatureFactor(conditions.temperature, baseProperties);
+    const pressureFactor = this.getPressureFactor(conditions.pressure, baseProperties);
     const strainRateFactor = this.getStrainRateFactor(conditions);
+    const environmentFactor = this.getMechanicalEnvironmentFactor(conditions.environment);
     
-    // Temperature-adjusted properties
-    const tensileStrength = baseProperties.tensileStrength * tempFactor * strainRateFactor;
-    const yieldStrength = baseProperties.yieldStrength * tempFactor * strainRateFactor;
-    const elasticModulus = baseProperties.elasticModulus * this.getModulusTemperatureFactor(conditions.temperature);
+    // Temperature and pressure-adjusted properties with physical models
+    const tensileStrength = baseProperties.tensileStrength * tempFactor * pressureFactor * strainRateFactor * environmentFactor;
+    const yieldStrength = baseProperties.yieldStrength * tempFactor * pressureFactor * strainRateFactor * environmentFactor;
+    const elasticModulus = baseProperties.elasticModulus * this.getModulusTemperaturePressureFactor(conditions.temperature, conditions.pressure, baseProperties);
     
-    // ML-enhanced predictions
-    const hardness = this.predictHardness(tensileStrength, baseProperties.composition);
-    const ductility = this.predictDuctility(baseProperties, conditions);
-    const toughness = this.predictToughness(tensileStrength, ductility);
+    // Advanced ML-enhanced predictions with sensitivity analysis
+    const hardness = this.predictHardnessAdvanced(tensileStrength, baseProperties.composition, conditions);
+    const ductility = this.predictDuctilityAdvanced(baseProperties, conditions);
+    const toughness = this.predictToughnessAdvanced(tensileStrength, ductility, conditions);
     
-    // Fatigue life prediction if cyclic loading
+    // Creep rate prediction for high temperature applications
+    const creepRate = this.predictCreepRate(baseProperties, conditions);
+    
+    // Fatigue life prediction with environmental effects
     let fatigueLife;
     if (conditions.loadingType === 'cyclic' && conditions.frequency) {
-      fatigueLife = this.predictFatigueLife(tensileStrength, conditions);
+      fatigueLife = this.predictFatigueLifeAdvanced(tensileStrength, conditions, baseProperties);
     }
 
     const properties = {
@@ -202,20 +210,21 @@ export class MaterialSimulator {
       hardness,
       ductility,
       toughness,
+      creepRate,
       fatigueLife
     };
 
-    const uncertainty = this.calculateMechanicalUncertainty(properties, baseProperties);
-    const confidence = this.calculateMechanicalConfidence(baseProperties, conditions);
+    const uncertainty = this.calculateMechanicalUncertaintyAdvanced(properties, baseProperties, conditions);
+    const confidence = this.calculateMechanicalConfidenceAdvanced(baseProperties, conditions);
     
-    const recommendations = this.generateMechanicalRecommendations(properties, conditions);
-    const warnings = this.generateMechanicalWarnings(properties, conditions);
+    const recommendations = this.generateMechanicalRecommendationsAdvanced(properties, conditions);
+    const warnings = this.generateMechanicalWarningsAdvanced(properties, conditions, baseProperties);
 
     return { properties, uncertainty, confidence, recommendations, warnings };
   }
 
   /**
-   * Simulate thermal properties using physics-based models
+   * Simulate thermal properties using advanced physics-based models with pressure sensitivity
    */
   private async simulateThermalProperties(
     baseProperties: any,
@@ -227,34 +236,39 @@ export class MaterialSimulator {
     recommendations: string[];
     warnings: string[];
   }> {
-    // Wiedemann-Franz law for metals
-    const thermalConductivity = this.predictThermalConductivity(baseProperties, conditions.temperature);
+    // Advanced thermal conductivity with temperature and pressure dependence
+    const thermalConductivity = this.predictThermalConductivityAdvanced(baseProperties, conditions);
     
-    // Thermal expansion with temperature dependence
-    const thermalExpansion = this.predictThermalExpansion(baseProperties, conditions.temperature);
+    // Thermal expansion with both temperature and pressure effects
+    const thermalExpansion = this.predictThermalExpansionAdvanced(baseProperties, conditions);
     
-    // Specific heat using Dulong-Petit law and Einstein model
-    const specificHeat = this.predictSpecificHeat(baseProperties, conditions.temperature);
+    // Specific heat using Einstein-Debye models with pressure correction
+    const specificHeat = this.predictSpecificHeatAdvanced(baseProperties, conditions);
     
-    // Thermal diffusivity
-    const thermalDiffusivity = thermalConductivity / (baseProperties.density * specificHeat);
+    // Thermal diffusivity with pressure-dependent density
+    const adjustedDensity = this.getPressuregentDensity(baseProperties.density, conditions.pressure);
+    const thermalDiffusivity = thermalConductivity / (adjustedDensity * specificHeat);
     
-    // Thermal shock resistance
-    const thermalShock = this.predictThermalShock(baseProperties, thermalConductivity, thermalExpansion);
+    // Advanced thermal shock resistance with pressure effects
+    const thermalShock = this.predictThermalShockAdvanced(baseProperties, thermalConductivity, thermalExpansion, conditions);
+    
+    // Thermal stress prediction
+    const thermalStress = this.predictThermalStress(baseProperties, conditions);
 
     const properties = {
       thermalConductivity,
       thermalExpansion,
       specificHeat,
       thermalDiffusivity,
-      thermalShock
+      thermalShock,
+      thermalStress
     };
 
-    const uncertainty = this.calculateThermalUncertainty(properties);
-    const confidence = this.calculateThermalConfidence(baseProperties, conditions);
+    const uncertainty = this.calculateThermalUncertaintyAdvanced(properties, conditions);
+    const confidence = this.calculateThermalConfidenceAdvanced(baseProperties, conditions);
     
-    const recommendations = this.generateThermalRecommendations(properties, conditions);
-    const warnings = this.generateThermalWarnings(properties, conditions);
+    const recommendations = this.generateThermalRecommendationsAdvanced(properties, conditions);
+    const warnings = this.generateThermalWarningsAdvanced(properties, conditions);
 
     return { properties, uncertainty, confidence, recommendations, warnings };
   }
@@ -346,82 +360,303 @@ export class MaterialSimulator {
     return { properties, uncertainty, confidence, recommendations, warnings };
   }
 
-  // Helper methods for property predictions
-  private getTemperatureFactor(temperature: number): number {
-    // Simplified temperature dependence for strength
+  // Advanced temperature and pressure factor calculations
+  private getAdvancedTemperatureFactor(temperature: number, baseProperties: any): number {
+    // Material-specific temperature dependence models
     const roomTemp = 25;
     const tempDiff = temperature - roomTemp;
-    return Math.max(0.1, 1 - tempDiff * 0.001);
+    const homologousTemp = (temperature + 273) / (baseProperties.meltingPoint + 273 || 1000);
+    
+    // Different models for different temperature regimes
+    if (homologousTemp < 0.3) {
+      // Low temperature regime - athermal strengthening dominates
+      return Math.max(0.2, 1 + tempDiff * 0.0002);
+    } else if (homologousTemp < 0.6) {
+      // Intermediate temperature - thermal activation
+      return Math.max(0.3, 1 - tempDiff * 0.001 - Math.pow(homologousTemp, 2) * 0.5);
+    } else {
+      // High temperature - rapid strength degradation
+      return Math.max(0.1, 1 - tempDiff * 0.003 - Math.pow(homologousTemp, 3) * 0.8);
+    }
   }
 
-  private getStrainRateFactor(conditions: SimulationConditions): number {
-    // Strain rate effects on strength
-    return conditions.strain ? Math.pow(conditions.strain, 0.1) : 1;
+  private getPressureFactor(pressure: number, baseProperties: any): number {
+    // Pressure effects on mechanical properties (GPa scale)
+    const pressureGPa = pressure / 1000; // Convert MPa to GPa
+    
+    // Most materials strengthen under pressure (Bridgman effect)
+    const pressureCoeff = baseProperties.category === 'ceramic' ? 0.1 : 0.05;
+    return 1 + pressureGPa * pressureCoeff;
   }
 
-  private getModulusTemperatureFactor(temperature: number): number {
-    // Elastic modulus decreases more gradually with temperature
-    const roomTemp = 25;
-    const tempDiff = temperature - roomTemp;
-    return Math.max(0.3, 1 - tempDiff * 0.0005);
+  private getModulusTemperaturePressureFactor(temperature: number, pressure: number, baseProperties: any): number {
+    // Combined temperature and pressure effects on elastic modulus
+    const tempFactor = this.getModulusTemperatureFactor(temperature);
+    const pressureGPa = pressure / 1000;
+    
+    // Pressure stiffens the material
+    const pressureFactor = 1 + pressureGPa * 0.02; // 2% increase per GPa
+    
+    return tempFactor * pressureFactor;
   }
 
-  private predictHardness(tensileStrength: number, composition: any): number {
-    // Empirical correlation: HV ≈ 3 × UTS (MPa)
-    return tensileStrength * 3;
+  private getMechanicalEnvironmentFactor(environment?: string): number {
+    // Environmental effects on mechanical properties
+    const factors = {
+      'air': 1.0,
+      'vacuum': 1.05, // No oxidation effects
+      'seawater': 0.9, // Stress corrosion
+      'acidic': 0.85, // Hydrogen embrittlement
+      'basic': 0.95   // Mild corrosion effects
+    };
+    return factors[environment || 'air'] || 1.0;
   }
 
-  private predictDuctility(baseProperties: any, conditions: SimulationConditions): number {
-    // Ductility decreases with strength and at low temperatures
-    const baseDuctility = 0.25; // Assume 25% elongation
+  // Advanced property prediction methods
+  private predictHardnessAdvanced(tensileStrength: number, composition: any, conditions: SimulationConditions): number {
+    // Temperature-dependent hardness correlation
+    const baseHardness = tensileStrength * 3; // HV ≈ 3 × UTS (MPa)
+    const tempFactor = Math.max(0.3, 1 - (conditions.temperature - 25) * 0.001);
+    const pressureFactor = 1 + (conditions.pressure / 1000) * 0.05; // Pressure hardening
+    
+    return baseHardness * tempFactor * pressureFactor;
+  }
+
+  private predictDuctilityAdvanced(baseProperties: any, conditions: SimulationConditions): number {
+    // Advanced ductility model with temperature and pressure effects
+    const baseDuctility = 0.25;
     const strengthFactor = Math.max(0.05, 1 - baseProperties.tensileStrength / 2000);
-    const tempFactor = Math.max(0.1, (conditions.temperature + 273) / 298);
-    return baseDuctility * strengthFactor * tempFactor;
+    
+    // Temperature effects - ductility increases with temperature (generally)
+    const tempK = conditions.temperature + 273;
+    const tempFactor = Math.max(0.1, Math.min(2.0, tempK / 298));
+    
+    // Pressure effects - pressure reduces ductility
+    const pressureFactor = Math.max(0.3, 1 - (conditions.pressure / 1000) * 0.1);
+    
+    // Environment effects
+    const envFactor = this.getDuctilityEnvironmentFactor(conditions.environment);
+    
+    return baseDuctility * strengthFactor * tempFactor * pressureFactor * envFactor;
   }
 
-  private predictToughness(tensileStrength: number, ductility: number): number {
-    // Toughness proportional to strength × ductility
-    return tensileStrength * ductility * 0.5;
+  private getDuctilityEnvironmentFactor(environment?: string): number {
+    const factors = {
+      'air': 1.0,
+      'vacuum': 1.1,    // No environmental degradation
+      'seawater': 0.7,  // Hydrogen embrittlement
+      'acidic': 0.6,    // Severe hydrogen embrittlement
+      'basic': 0.9      // Mild effects
+    };
+    return factors[environment || 'air'] || 1.0;
   }
 
-  private predictFatigueLife(tensileStrength: number, conditions: SimulationConditions): number {
-    // Basquin's equation: N = (σ_f' / σ_a)^(1/b)
+  private predictToughnessAdvanced(tensileStrength: number, ductility: number, conditions: SimulationConditions): number {
+    // Temperature-dependent toughness
+    const baseToughness = tensileStrength * ductility * 0.5;
+    
+    // Ductile-brittle transition consideration
+    const transitionTemp = this.estimateDBTT(conditions);
+    const tempFactor = conditions.temperature < transitionTemp ? 0.3 : 1.0;
+    
+    return baseToughness * tempFactor;
+  }
+
+  private estimateDBTT(conditions: SimulationConditions): number {
+    // Estimate ductile-brittle transition temperature
+    // Simplified model - would be material-specific in practice
+    return -50; // °C for steel-like materials
+  }
+
+  private predictCreepRate(baseProperties: any, conditions: SimulationConditions): number {
+    // Norton-Bailey creep law: ε̇ = A * σⁿ * exp(-Q/RT)
+    const homologousTemp = (conditions.temperature + 273) / (baseProperties.meltingPoint + 273 || 1000);
+    
+    if (homologousTemp < 0.4) {
+      return 0; // Negligible creep below 0.4 Tm
+    }
+    
+    const stressExponent = 5; // Typical value
+    const activationEnergy = 300000; // J/mol, typical for diffusion
+    const gasConstant = 8.314; // J/mol·K
+    const preExponential = 1e-6; // Material constant
+    
+    const stress = baseProperties.tensileStrength * 0.5; // Assume 50% of UTS
+    const temperature = conditions.temperature + 273;
+    
+    const creepRate = preExponential * 
+                     Math.pow(stress, stressExponent) * 
+                     Math.exp(-activationEnergy / (gasConstant * temperature));
+    
+    return creepRate * 3.15e7; // Convert to per year
+  }
+
+  private predictFatigueLifeAdvanced(tensileStrength: number, conditions: SimulationConditions, baseProperties: any): number {
+    // Advanced fatigue model including environmental effects
     const fatigueStrengthCoeff = tensileStrength * 1.5;
     const fatigueStrengthExp = -0.1;
-    const stressAmplitude = tensileStrength * 0.5; // Assume 50% of UTS
-    return Math.pow(fatigueStrengthCoeff / stressAmplitude, 1 / fatigueStrengthExp);
+    const stressAmplitude = tensileStrength * 0.5;
+    
+    // Temperature effects on fatigue
+    const tempFactor = Math.max(0.3, 1 - (conditions.temperature - 25) * 0.002);
+    
+    // Environment effects on fatigue
+    const envFactor = this.getFatigueEnvironmentFactor(conditions.environment);
+    
+    // Frequency effects
+    const freqFactor = conditions.frequency ? Math.pow(conditions.frequency / 10, -0.1) : 1;
+    
+    const baseFatigueLife = Math.pow(fatigueStrengthCoeff / stressAmplitude, 1 / fatigueStrengthExp);
+    
+    return baseFatigueLife * tempFactor * envFactor * freqFactor;
   }
 
-  private predictThermalConductivity(baseProperties: any, temperature: number): number {
-    // Wiedemann-Franz law for metals, empirical for others
+  private getFatigueEnvironmentFactor(environment?: string): number {
+    const factors = {
+      'air': 1.0,
+      'vacuum': 1.2,    // No corrosion fatigue
+      'seawater': 0.3,  // Severe corrosion fatigue
+      'acidic': 0.2,    // Very severe corrosion fatigue
+      'basic': 0.7      // Moderate corrosion fatigue
+    };
+    return factors[environment || 'air'] || 1.0;
+  }
+
+  // Advanced thermal property prediction methods
+  private predictThermalConductivityAdvanced(baseProperties: any, conditions: SimulationConditions): number {
+    const temperature = conditions.temperature + 273; // Convert to Kelvin
+    const pressure = conditions.pressure;
+    
     if (baseProperties.category === 'metal') {
+      // Wiedemann-Franz law with temperature and pressure corrections
       const lorenzNumber = 2.44e-8; // W·Ω/K²
-      const conductivity = 1 / (baseProperties.resistivity || 1e-7);
-      return lorenzNumber * conductivity * (temperature + 273);
+      const resistivity = this.predictResistivity(baseProperties, conditions.temperature);
+      const conductivity = 1 / resistivity;
+      
+      // Base thermal conductivity
+      let thermalCond = lorenzNumber * conductivity * temperature;
+      
+      // Pressure effects on phonon scattering
+      const pressureFactor = 1 + (pressure / 1000) * 0.05; // 5% increase per GPa
+      thermalCond *= pressureFactor;
+      
+      return thermalCond;
+    } else if (baseProperties.category === 'ceramic') {
+      // Phonon conduction with Umklapp scattering
+      const baseConductivity = baseProperties.thermalConductivity || 5.0;
+      const debyeTemp = 500; // Typical Debye temperature
+      
+      // Temperature dependence for ceramics
+      const tempFactor = Math.pow(debyeTemp / temperature, 2) * Math.exp(debyeTemp / temperature) / Math.pow(Math.exp(debyeTemp / temperature) - 1, 2);
+      
+      // Pressure increases phonon velocity
+      const pressureFactor = 1 + (pressure / 1000) * 0.1;
+      
+      return baseConductivity * tempFactor * pressureFactor;
+    } else {
+      // Polymers and other materials
+      const baseConductivity = baseProperties.thermalConductivity || 0.5;
+      const tempFactor = Math.max(0.5, 1 - (conditions.temperature - 25) * 0.001);
+      const pressureFactor = 1 + (pressure / 1000) * 0.02;
+      
+      return baseConductivity * tempFactor * pressureFactor;
     }
-    return baseProperties.thermalConductivity || 1.0;
   }
 
-  private predictThermalExpansion(baseProperties: any, temperature: number): number {
-    // Temperature dependence of thermal expansion
-    const baseExpansion = baseProperties.thermalExpansion || 10;
-    const tempFactor = 1 + (temperature - 25) * 0.0001;
-    return baseExpansion * tempFactor;
+  private predictThermalExpansionAdvanced(baseProperties: any, conditions: SimulationConditions): number {
+    const temperature = conditions.temperature + 273;
+    const pressure = conditions.pressure;
+    
+    // Grüneisen parameter approach
+    const baseExpansion = baseProperties.thermalExpansion || 10e-6; // per K
+    const gruneisen = 2.0; // Typical Grüneisen parameter
+    
+    // Temperature dependence (non-linear at high T)
+    const tempFactor = 1 + (temperature - 298) / 298 * 0.1;
+    
+    // Pressure effects (compression reduces expansion)
+    const compressibility = 1e-4; // Typical value GPa⁻¹
+    const pressureFactor = 1 - (pressure / 1000) * compressibility * gruneisen;
+    
+    return baseExpansion * tempFactor * pressureFactor;
   }
 
-  private predictSpecificHeat(baseProperties: any, temperature: number): number {
-    // Einstein model for specific heat
-    const baseHeat = baseProperties.specificHeat || 500;
-    const einsteinTemp = 300; // Simplified Einstein temperature
-    const x = einsteinTemp / (temperature + 273);
-    const factor = Math.pow(x * Math.exp(x) / (Math.exp(x) - 1), 2);
-    return baseHeat * factor;
+  private predictSpecificHeatAdvanced(baseProperties: any, conditions: SimulationConditions): number {
+    const temperature = conditions.temperature + 273;
+    const pressure = conditions.pressure;
+    
+    if (baseProperties.category === 'metal') {
+      // Electronic + lattice contributions
+      const debyeTemp = 400; // Typical for metals
+      const gasConstant = 8.314; // J/mol·K
+      
+      // Debye model for lattice contribution
+      const x = debyeTemp / temperature;
+      const latticeHeat = 3 * gasConstant * Math.pow(x, 2) * Math.exp(x) / Math.pow(Math.exp(x) - 1, 2);
+      
+      // Electronic contribution (linear in T)
+      const electronicHeat = 0.1 * temperature; // Simplified
+      
+      // Convert to J/kg·K (approximate)
+      const molarMass = 0.055; // kg/mol, typical for metals
+      let specificHeat = (latticeHeat + electronicHeat) / molarMass;
+      
+      // Pressure effects
+      const pressureFactor = 1 + (pressure / 1000) * 0.01;
+      specificHeat *= pressureFactor;
+      
+      return specificHeat;
+    } else {
+      // Einstein model for non-metals
+      const baseHeat = baseProperties.specificHeat || 500;
+      const einsteinTemp = 300;
+      const x = einsteinTemp / temperature;
+      const factor = Math.pow(x * Math.exp(x) / (Math.exp(x) - 1), 2);
+      
+      const pressureFactor = 1 + (pressure / 1000) * 0.02;
+      return baseHeat * factor * pressureFactor;
+    }
   }
 
-  private predictThermalShock(baseProperties: any, thermalConductivity: number, thermalExpansion: number): number {
-    // Thermal shock resistance parameter
+  private getPressuregentDensity(baseDensity: number, pressure: number): number {
+    // Bulk modulus compression
+    const bulkModulus = 200; // GPa, typical value
+    const pressureGPa = pressure / 1000;
+    
+    // Linear compression approximation
+    const densityIncrease = 1 + pressureGPa / bulkModulus;
+    return baseDensity * densityIncrease;
+  }
+
+  private predictThermalShockAdvanced(
+    baseProperties: any, 
+    thermalConductivity: number, 
+    thermalExpansion: number, 
+    conditions: SimulationConditions
+  ): number {
+    // Advanced thermal shock resistance parameter
     const tensileStrength = baseProperties.tensileStrength || 100;
-    return (tensileStrength * thermalConductivity) / (thermalExpansion * baseProperties.elasticModulus || 1);
+    const elasticModulus = baseProperties.elasticModulus || 100000;
+    const poissonRatio = 0.3; // Typical value
+    
+    // Thermal shock resistance with stress concentration
+    const thermalShockParam = (tensileStrength * thermalConductivity * (1 - poissonRatio)) / 
+                             (elasticModulus * thermalExpansion);
+    
+    // Pressure effects on thermal shock
+    const pressureFactor = Math.max(0.5, 1 - (conditions.pressure / 1000) * 0.1);
+    
+    return thermalShockParam * pressureFactor;
+  }
+
+  private predictThermalStress(baseProperties: any, conditions: SimulationConditions): number {
+    // Thermal stress from temperature gradients and constraints
+    const thermalExpansion = baseProperties.thermalExpansion || 10e-6;
+    const elasticModulus = baseProperties.elasticModulus || 100000;
+    const tempGradient = Math.abs(conditions.temperature - 25); // Simplified
+    
+    // Thermal stress = E * α * ΔT for constrained expansion
+    return elasticModulus * thermalExpansion * tempGradient;
   }
 
   private predictResistivity(baseProperties: any, temperature: number): number {
@@ -502,88 +737,272 @@ export class MaterialSimulator {
     return factors[environment || 'air'] || 1.0;
   }
 
-  // Uncertainty calculation methods
-  private calculateMechanicalUncertainty(properties: any, baseProperties: any): any {
-    const uncertaintyFactor = 0.15; // 15% uncertainty
+  // Advanced uncertainty and confidence calculation methods
+  private calculateMechanicalUncertaintyAdvanced(properties: any, baseProperties: any, conditions: SimulationConditions): any {
+    // Uncertainty increases with extreme conditions
+    let baseUncertainty = 0.15; // 15% base uncertainty
+    
+    // Temperature effects on uncertainty
+    const tempK = conditions.temperature + 273;
+    const homologousTemp = tempK / (baseProperties.meltingPoint + 273 || 1000);
+    if (homologousTemp > 0.7) baseUncertainty += 0.1; // High temp uncertainty
+    if (conditions.temperature < -100) baseUncertainty += 0.05; // Low temp uncertainty
+    
+    // Pressure effects
+    if (conditions.pressure > 100) baseUncertainty += 0.05; // High pressure uncertainty
+    
+    // Environment effects
+    if (conditions.environment && conditions.environment !== 'air') baseUncertainty += 0.05;
+    
     return Object.keys(properties).reduce((acc, key) => {
       if (properties[key] !== undefined) {
         const value = properties[key];
+        // Property-specific uncertainty adjustments
+        let propertyUncertainty = baseUncertainty;
+        if (key === 'creepRate' || key === 'fatigueLife') propertyUncertainty *= 2; // Higher uncertainty for time-dependent properties
+        
         acc[key] = {
-          min: value * (1 - uncertaintyFactor),
-          max: value * (1 + uncertaintyFactor)
+          min: value * (1 - propertyUncertainty),
+          max: value * (1 + propertyUncertainty)
         };
       }
       return acc;
     }, {} as any);
   }
 
-  private calculateThermalUncertainty(properties: any): any {
-    return this.calculateMechanicalUncertainty(properties, {});
+  private calculateThermalUncertaintyAdvanced(properties: any, conditions: SimulationConditions): any {
+    let baseUncertainty = 0.12; // 12% base uncertainty for thermal
+    
+    // High temperature increases uncertainty
+    if (conditions.temperature > 500) baseUncertainty += 0.08;
+    if (conditions.temperature > 1000) baseUncertainty += 0.15;
+    
+    // High pressure effects
+    if (conditions.pressure > 50) baseUncertainty += 0.03;
+    
+    return Object.keys(properties).reduce((acc, key) => {
+      if (properties[key] !== undefined) {
+        const value = properties[key];
+        acc[key] = {
+          min: value * (1 - baseUncertainty),
+          max: value * (1 + baseUncertainty)
+        };
+      }
+      return acc;
+    }, {} as any);
   }
 
-  private calculateElectricalUncertainty(properties: any): any {
-    return this.calculateMechanicalUncertainty(properties, {});
-  }
-
-  private calculateChemicalUncertainty(properties: any): any {
-    return this.calculateMechanicalUncertainty(properties, {});
-  }
-
-  // Confidence calculation methods
-  private calculateMechanicalConfidence(baseProperties: any, conditions: SimulationConditions): number {
+  private calculateMechanicalConfidenceAdvanced(baseProperties: any, conditions: SimulationConditions): number {
     let confidence = 0.8;
-    if (conditions.temperature > 500) confidence *= 0.8;
-    if (conditions.temperature < -50) confidence *= 0.9;
-    if (conditions.loadingType === 'impact') confidence *= 0.7;
+    
+    // Temperature effects on confidence
+    const homologousTemp = (conditions.temperature + 273) / (baseProperties.meltingPoint + 273 || 1000);
+    if (homologousTemp > 0.8) confidence *= 0.6; // Very high temperature
+    else if (homologousTemp > 0.6) confidence *= 0.7; // High temperature
+    else if (homologousTemp < 0.2) confidence *= 0.9; // Low temperature
+    
+    // Pressure effects
+    if (conditions.pressure > 500) confidence *= 0.7; // Very high pressure
+    else if (conditions.pressure > 100) confidence *= 0.8; // High pressure
+    
+    // Loading type effects
+    if (conditions.loadingType === 'impact') confidence *= 0.6;
+    else if (conditions.loadingType === 'cyclic') confidence *= 0.7;
+    
+    // Environment effects
+    if (conditions.environment === 'seawater' || conditions.environment === 'acidic') confidence *= 0.7;
+    
+    return Math.max(0.2, confidence);
+  }
+
+  private calculateThermalConfidenceAdvanced(baseProperties: any, conditions: SimulationConditions): number {
+    let confidence = 0.85;
+    
+    // Temperature regime confidence
+    if (conditions.temperature > 1200) confidence *= 0.5; // Extreme high temp
+    else if (conditions.temperature > 800) confidence *= 0.6;
+    else if (conditions.temperature > 400) confidence *= 0.8;
+    else if (conditions.temperature < -150) confidence *= 0.7; // Cryogenic
+    
+    // Pressure effects
+    if (conditions.pressure > 200) confidence *= 0.6; // Extreme pressure
+    else if (conditions.pressure > 50) confidence *= 0.8;
+    
     return Math.max(0.3, confidence);
   }
 
-  private calculateThermalConfidence(baseProperties: any, conditions: SimulationConditions): number {
-    let confidence = 0.85;
-    if (conditions.temperature > 1000) confidence *= 0.7;
-    return Math.max(0.4, confidence);
+  // Advanced recommendation generation
+  private generateMechanicalRecommendationsAdvanced(properties: any, conditions: SimulationConditions): string[] {
+    const recommendations = [];
+    
+    // Temperature-based recommendations
+    if (conditions.temperature > 400) {
+      recommendations.push("Consider high-temperature alloys or ceramics for this application");
+    }
+    if (conditions.temperature < -50) {
+      recommendations.push("Verify impact toughness at cryogenic temperatures");
+    }
+    
+    // Pressure-based recommendations
+    if (conditions.pressure > 100) {
+      recommendations.push("High pressure may enhance material properties through work hardening");
+    }
+    
+    // Property-based recommendations
+    if (properties.ductility < 0.03) {
+      recommendations.push("Low ductility may lead to brittle failure - consider toughening treatments");
+    }
+    if (properties.creepRate && properties.creepRate > 1e-6) {
+      recommendations.push("Significant creep expected - consider creep-resistant materials");
+    }
+    if (properties.fatigueLife && properties.fatigueLife < 1e5) {
+      recommendations.push("Low fatigue life predicted - implement fatigue design procedures");
+    }
+    
+    // Environment-based recommendations
+    if (conditions.environment === 'seawater') {
+      recommendations.push("Marine environment requires corrosion-resistant materials and coatings");
+    }
+    if (conditions.environment === 'acidic') {
+      recommendations.push("Acidic environment may cause hydrogen embrittlement - use resistant alloys");
+    }
+    
+    return recommendations;
+  }
+
+  private generateThermalRecommendationsAdvanced(properties: any, conditions: SimulationConditions): string[] {
+    const recommendations = [];
+    
+    if (properties.thermalConductivity < 1) {
+      recommendations.push("Low thermal conductivity may cause thermal gradients and stress");
+    }
+    if (properties.thermalExpansion > 20e-6) {
+      recommendations.push("High thermal expansion coefficient - consider expansion joints");
+    }
+    if (properties.thermalShock < 5) {
+      recommendations.push("Poor thermal shock resistance - avoid rapid temperature changes");
+    }
+    if (properties.thermalStress > properties.tensileStrength * 0.5) {
+      recommendations.push("High thermal stress predicted - consider stress relief measures");
+    }
+    
+    // Temperature-specific recommendations
+    if (conditions.temperature > 800) {
+      recommendations.push("High temperature operation requires thermal barrier coatings");
+    }
+    if (conditions.pressure > 50) {
+      recommendations.push("High pressure enhances thermal conductivity - optimize heat transfer design");
+    }
+    
+    return recommendations;
+  }
+
+  private generateMechanicalWarningsAdvanced(properties: any, conditions: SimulationConditions, baseProperties: any): string[] {
+    const warnings = [];
+    
+    // Critical temperature warnings
+    const homologousTemp = (conditions.temperature + 273) / (baseProperties.meltingPoint + 273 || 1000);
+    if (homologousTemp > 0.8) {
+      warnings.push("CRITICAL: Operating near melting point - material may fail catastrophically");
+    } else if (homologousTemp > 0.6) {
+      warnings.push("WARNING: High temperature operation - monitor for thermal degradation");
+    }
+    
+    // Creep warnings
+    if (properties.creepRate && properties.creepRate > 1e-5) {
+      warnings.push("WARNING: High creep rate - dimensional stability compromised");
+    }
+    
+    // Fatigue warnings
+    if (properties.fatigueLife && properties.fatigueLife < 1e4) {
+      warnings.push("WARNING: Very low fatigue life - frequent inspection mandatory");
+    }
+    
+    // Pressure warnings
+    if (conditions.pressure > 500) {
+      warnings.push("WARNING: Extreme pressure may cause material phase changes");
+    }
+    
+    // Environmental warnings
+    if (conditions.environment === 'acidic' && properties.ductility < 0.05) {
+      warnings.push("CRITICAL: Hydrogen embrittlement risk in acidic environment");
+    }
+    
+    return warnings;
+  }
+
+  private generateThermalWarningsAdvanced(properties: any, conditions: SimulationConditions): string[] {
+    const warnings = [];
+    
+    if (conditions.temperature > 0.9 * 1000) { // Assume max service temp
+      warnings.push("CRITICAL: Temperature exceeds safe operating limit");
+    }
+    
+    if (properties.thermalStress > 500) { // MPa
+      warnings.push("WARNING: High thermal stress may cause cracking");
+    }
+    
+    if (properties.thermalShock < 2) {
+      warnings.push("CRITICAL: Extremely poor thermal shock resistance");
+    }
+    
+    return warnings;
+  }
+
+  // Helper method to maintain compatibility
+  private getStrainRateFactor(conditions: SimulationConditions): number {
+    // Strain rate effects on strength
+    return conditions.strain ? Math.pow(conditions.strain, 0.1) : 1;
+  }
+
+  private getModulusTemperatureFactor(temperature: number): number {
+    // Elastic modulus decreases more gradually with temperature
+    const roomTemp = 25;
+    const tempDiff = temperature - roomTemp;
+    return Math.max(0.3, 1 - tempDiff * 0.0005);
+  }
+
+  // Additional uncertainty and confidence methods for electrical/chemical
+  private calculateElectricalUncertainty(properties: any): any {
+    const baseUncertainty = 0.2; // 20% for electrical properties
+    return Object.keys(properties).reduce((acc, key) => {
+      if (properties[key] !== undefined) {
+        const value = properties[key];
+        acc[key] = {
+          min: value * (1 - baseUncertainty),
+          max: value * (1 + baseUncertainty)
+        };
+      }
+      return acc;
+    }, {} as any);
+  }
+
+  private calculateChemicalUncertainty(properties: any): any {
+    const baseUncertainty = 0.25; // 25% for chemical properties (highest uncertainty)
+    return Object.keys(properties).reduce((acc, key) => {
+      if (properties[key] !== undefined) {
+        const value = properties[key];
+        acc[key] = {
+          min: value * (1 - baseUncertainty),
+          max: value * (1 + baseUncertainty)
+        };
+      }
+      return acc;
+    }, {} as any);
   }
 
   private calculateElectricalConfidence(baseProperties: any, conditions: SimulationConditions): number {
     let confidence = 0.75;
     if (conditions.humidity && conditions.humidity > 80) confidence *= 0.8;
+    if (conditions.temperature > 200) confidence *= 0.8;
     return Math.max(0.3, confidence);
   }
 
   private calculateChemicalConfidence(baseProperties: any, conditions: SimulationConditions): number {
     let confidence = 0.7;
     if (conditions.environment && conditions.environment !== 'air') confidence *= 0.8;
+    if (conditions.temperature > 300) confidence *= 0.9;
     return Math.max(0.3, confidence);
-  }
-
-  // Recommendation generation methods
-  private generateMechanicalRecommendations(properties: any, conditions: SimulationConditions): string[] {
-    const recommendations = [];
-    
-    if (properties.ductility < 0.05) {
-      recommendations.push("Consider heat treatment to improve ductility");
-    }
-    if (properties.tensileStrength < 200) {
-      recommendations.push("Strength may be insufficient for structural applications");
-    }
-    if (conditions.temperature > 300 && properties.tensileStrength < properties.tensileStrength * 0.8) {
-      recommendations.push("High-temperature strength degradation expected");
-    }
-    
-    return recommendations;
-  }
-
-  private generateThermalRecommendations(properties: any, conditions: SimulationConditions): string[] {
-    const recommendations = [];
-    
-    if (properties.thermalConductivity < 1) {
-      recommendations.push("Low thermal conductivity may cause hot spots");
-    }
-    if (properties.thermalShock < 10) {
-      recommendations.push("Poor thermal shock resistance - avoid rapid temperature changes");
-    }
-    
-    return recommendations;
   }
 
   private generateElectricalRecommendations(properties: any, conditions: SimulationConditions): string[] {
@@ -610,30 +1029,6 @@ export class MaterialSimulator {
     }
     
     return recommendations;
-  }
-
-  // Warning generation methods
-  private generateMechanicalWarnings(properties: any, conditions: SimulationConditions): string[] {
-    const warnings = [];
-    
-    if (conditions.temperature > 0.6 * (properties.meltingPoint || 1000)) {
-      warnings.push("Operating near material degradation temperature");
-    }
-    if (properties.fatigueLife && properties.fatigueLife < 1e4) {
-      warnings.push("Low fatigue life predicted - frequent inspection required");
-    }
-    
-    return warnings;
-  }
-
-  private generateThermalWarnings(properties: any, conditions: SimulationConditions): string[] {
-    const warnings = [];
-    
-    if (conditions.temperature > (properties.maxServiceTemp || 200)) {
-      warnings.push("Temperature exceeds recommended service limit");
-    }
-    
-    return warnings;
   }
 
   private generateElectricalWarnings(properties: any, conditions: SimulationConditions): string[] {

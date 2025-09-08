@@ -210,9 +210,19 @@ export function SimulationTools({ selectedMaterial, onSimulationComplete }: Simu
             </TabsContent>
 
             <TabsContent value="conditions" className="space-y-4">
+              <div className="mb-4">
+                <h4 className="font-medium mb-2">Environmental Conditions</h4>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Adjust temperature and pressure to see how they affect material properties in real-time.
+                </p>
+              </div>
+              
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="temperature">Temperature (°C)</Label>
+                  <Label htmlFor="temperature" className="flex items-center gap-2">
+                    <Thermometer className="h-4 w-4" />
+                    Temperature (°C)
+                  </Label>
                   <Input
                     id="temperature"
                     type="number"
@@ -220,10 +230,16 @@ export function SimulationTools({ selectedMaterial, onSimulationComplete }: Simu
                     onChange={(e) => setTemperature(Number(e.target.value))}
                     placeholder="25"
                   />
+                  <div className="text-xs text-muted-foreground">
+                    Range: -273°C to 2000°C
+                  </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="pressure">Pressure (MPa)</Label>
+                  <Label htmlFor="pressure" className="flex items-center gap-2">
+                    <Lightning className="h-4 w-4" />
+                    Pressure (MPa)
+                  </Label>
                   <Input
                     id="pressure"
                     type="number"
@@ -232,6 +248,9 @@ export function SimulationTools({ selectedMaterial, onSimulationComplete }: Simu
                     onChange={(e) => setPressure(Number(e.target.value))}
                     placeholder="0.1"
                   />
+                  <div className="text-xs text-muted-foreground">
+                    0.1 = atmospheric, 1000+ = extreme pressure
+                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -243,6 +262,9 @@ export function SimulationTools({ selectedMaterial, onSimulationComplete }: Simu
                     onChange={(e) => setHumidity(Number(e.target.value))}
                     placeholder="50"
                   />
+                  <div className="text-xs text-muted-foreground">
+                    Affects electrical and chemical properties
+                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -255,6 +277,9 @@ export function SimulationTools({ selectedMaterial, onSimulationComplete }: Simu
                     onChange={(e) => setStrain(Number(e.target.value))}
                     placeholder="0"
                   />
+                  <div className="text-xs text-muted-foreground">
+                    Mechanical deformation level
+                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -266,6 +291,9 @@ export function SimulationTools({ selectedMaterial, onSimulationComplete }: Simu
                     onChange={(e) => setFrequency(Number(e.target.value))}
                     placeholder="0"
                   />
+                  <div className="text-xs text-muted-foreground">
+                    For fatigue analysis
+                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -275,11 +303,11 @@ export function SimulationTools({ selectedMaterial, onSimulationComplete }: Simu
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="air">Air</SelectItem>
+                      <SelectItem value="air">Air (Standard)</SelectItem>
                       <SelectItem value="vacuum">Vacuum</SelectItem>
                       <SelectItem value="seawater">Seawater</SelectItem>
                       <SelectItem value="acidic">Acidic</SelectItem>
-                      <SelectItem value="basic">Basic</SelectItem>
+                      <SelectItem value="basic">Basic/Alkaline</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -304,9 +332,60 @@ export function SimulationTools({ selectedMaterial, onSimulationComplete }: Simu
               <Alert>
                 <Lightbulb className="h-4 w-4" />
                 <AlertDescription>
-                  Adjust conditions to match your specific application. Temperature and environment have the most significant impact on material properties.
+                  <strong>Temperature & Pressure Effects:</strong> Higher temperatures generally reduce strength but may increase ductility. 
+                  Pressure typically strengthens materials through compression. Extreme conditions reduce prediction confidence.
                 </AlertDescription>
               </Alert>
+              
+              <div className="bg-muted p-4 rounded-lg">
+                <h5 className="font-medium mb-2">Quick Presets</h5>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      setTemperature(25);
+                      setPressure(0.1);
+                      setEnvironment('air');
+                    }}
+                  >
+                    Room Conditions
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      setTemperature(500);
+                      setPressure(0.1);
+                      setEnvironment('air');
+                    }}
+                  >
+                    High Temperature
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      setTemperature(25);
+                      setPressure(100);
+                      setEnvironment('air');
+                    }}
+                  >
+                    High Pressure
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      setTemperature(-50);
+                      setPressure(0.1);
+                      setEnvironment('air');
+                    }}
+                  >
+                    Cryogenic
+                  </Button>
+                </div>
+              </div>
             </TabsContent>
 
             <TabsContent value="custom" className="space-y-4">
@@ -582,6 +661,7 @@ function SimulationResultsDisplay({ results }: { results: SimulationResults }) {
                     hardness: 'HV',
                     ductility: '%',
                     toughness: 'MJ/m³',
+                    creepRate: '/year',
                     fatigueLife: 'cycles'
                   }}
                 />
@@ -599,7 +679,8 @@ function SimulationResultsDisplay({ results }: { results: SimulationResults }) {
                     thermalExpansion: '10⁻⁶/K',
                     specificHeat: 'J/kg·K',
                     thermalDiffusivity: 'm²/s',
-                    thermalShock: 'W/m'
+                    thermalShock: 'W/m',
+                    thermalStress: 'MPa'
                   }}
                 />
               </TabsContent>

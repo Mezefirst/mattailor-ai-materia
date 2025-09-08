@@ -6,7 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
-import { TestTube, ChartLine, Thermometer, Lightning, Atom, FlaskConical, Calculator, BarChart3 } from '@phosphor-icons/react';
+import { TestTube, ChartLine, Thermometer, Lightning, Atom, FlaskConical, Calculator, BarChart3, Lightbulb } from '@phosphor-icons/react';
 import { Material } from '@/data/materials';
 import { SimulationTools } from '@/components/simulation/SimulationTools';
 import { SimulationResults } from '@/services/simulation';
@@ -22,8 +22,9 @@ export function Properties({ selectedMaterial, materials }: PropertiesProps) {
   const [activeTab, setActiveTab] = useState('overview');
   const [simulationResults, setSimulationResults] = useState<SimulationResults | null>(null);
 
-  // Sample data for charts - in real app, this would be dynamic based on material
+  // Sample data for charts - enhanced with pressure sensitivity
   const temperatureData = selectedMaterial ? [
+    { temp: -100, strength: Math.max(20, selectedMaterial.mechanical.tensileStrength * 1.3), conductivity: selectedMaterial.thermal.thermalConductivity * 0.9 },
     { temp: -50, strength: Math.max(20, selectedMaterial.mechanical.tensileStrength * 1.2), conductivity: selectedMaterial.thermal.thermalConductivity * 0.95 },
     { temp: 0, strength: selectedMaterial.mechanical.tensileStrength, conductivity: selectedMaterial.thermal.thermalConductivity },
     { temp: 100, strength: selectedMaterial.mechanical.tensileStrength * 0.95, conductivity: selectedMaterial.thermal.thermalConductivity * 1.02 },
@@ -31,6 +32,16 @@ export function Properties({ selectedMaterial, materials }: PropertiesProps) {
     { temp: 300, strength: selectedMaterial.mechanical.tensileStrength * 0.8, conductivity: selectedMaterial.thermal.thermalConductivity * 1.08 },
     { temp: 500, strength: selectedMaterial.mechanical.tensileStrength * 0.65, conductivity: selectedMaterial.thermal.thermalConductivity * 1.15 },
     { temp: 800, strength: Math.max(10, selectedMaterial.mechanical.tensileStrength * 0.4), conductivity: selectedMaterial.thermal.thermalConductivity * 1.25 },
+    { temp: 1000, strength: Math.max(5, selectedMaterial.mechanical.tensileStrength * 0.2), conductivity: selectedMaterial.thermal.thermalConductivity * 1.3 },
+  ] : [];
+
+  const pressureData = selectedMaterial ? [
+    { pressure: 0.1, strength: selectedMaterial.mechanical.tensileStrength, modulus: selectedMaterial.mechanical.elasticModulus },
+    { pressure: 1, strength: selectedMaterial.mechanical.tensileStrength * 1.02, modulus: selectedMaterial.mechanical.elasticModulus * 1.01 },
+    { pressure: 10, strength: selectedMaterial.mechanical.tensileStrength * 1.05, modulus: selectedMaterial.mechanical.elasticModulus * 1.02 },
+    { pressure: 100, strength: selectedMaterial.mechanical.tensileStrength * 1.15, modulus: selectedMaterial.mechanical.elasticModulus * 1.05 },
+    { pressure: 500, strength: selectedMaterial.mechanical.tensileStrength * 1.25, modulus: selectedMaterial.mechanical.elasticModulus * 1.1 },
+    { pressure: 1000, strength: selectedMaterial.mechanical.tensileStrength * 1.35, modulus: selectedMaterial.mechanical.elasticModulus * 1.15 },
   ] : [];
 
   const stressStrainData = selectedMaterial ? [
@@ -130,6 +141,7 @@ export function Properties({ selectedMaterial, materials }: PropertiesProps) {
               selectedComparison={selectedComparison}
               setSelectedComparison={setSelectedComparison}
               temperatureData={temperatureData}
+              pressureData={pressureData}
               stressStrainData={stressStrainData}
               getRadarData={getRadarData}
               calculatePerformanceScore={calculatePerformanceScore}
@@ -164,6 +176,7 @@ function PropertyOverview({
   selectedComparison, 
   setSelectedComparison, 
   temperatureData, 
+  pressureData,
   stressStrainData,
   getRadarData,
   calculatePerformanceScore,
@@ -283,7 +296,10 @@ function PropertyOverview({
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Temperature Performance</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Thermometer className="h-5 w-5" />
+              Temperature Sensitivity Analysis
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-64">
@@ -318,42 +334,95 @@ function PropertyOverview({
                 </LineChart>
               </ResponsiveContainer>
             </div>
+            <div className="mt-4 text-sm text-muted-foreground">
+              <p>• Strength typically decreases with temperature</p>
+              <p>• Thermal conductivity may increase with temperature for metals</p>
+            </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Stress-Strain Curve</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Lightning className="h-5 w-5" />
+              Pressure Sensitivity Analysis
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={stressStrainData}>
+                <LineChart data={pressureData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis 
-                    dataKey="strain" 
-                    label={{ value: 'Strain', position: 'insideBottom', offset: -5 }}
+                    dataKey="pressure" 
+                    scale="log"
+                    domain={['dataMin', 'dataMax']}
+                    label={{ value: 'Pressure (MPa)', position: 'insideBottom', offset: -5 }}
                   />
                   <YAxis 
-                    label={{ value: 'Stress (MPa)', angle: -90, position: 'insideLeft' }}
+                    label={{ value: 'Property Value', angle: -90, position: 'insideLeft' }}
                   />
                   <Tooltip 
-                    formatter={(value) => [`${typeof value === 'number' ? value.toFixed(1) : value} MPa`, 'Stress']}
-                    labelFormatter={(strain) => `Strain: ${strain}`}
+                    formatter={(value, name) => [`${typeof value === 'number' ? value.toFixed(1) : value}${name === 'strength' ? ' MPa' : ' GPa'}`, name === 'strength' ? 'Strength' : 'Modulus']}
+                    labelFormatter={(pressure) => `Pressure: ${pressure} MPa`}
                   />
                   <Line 
                     type="monotone" 
-                    dataKey="stress" 
+                    dataKey="strength" 
                     stroke="hsl(var(--accent))" 
-                    strokeWidth={3}
-                    dot={{ fill: 'hsl(var(--accent))', strokeWidth: 2, r: 4 }}
+                    strokeWidth={2}
+                    name="strength"
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="modulus" 
+                    stroke="hsl(var(--scientific))" 
+                    strokeWidth={2}
+                    name="modulus"
                   />
                 </LineChart>
               </ResponsiveContainer>
             </div>
+            <div className="mt-4 text-sm text-muted-foreground">
+              <p>• Most materials strengthen under hydrostatic pressure</p>
+              <p>• Elastic modulus increases with pressure compression</p>
+            </div>
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Stress-Strain Behavior</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={stressStrainData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="strain" 
+                  label={{ value: 'Strain', position: 'insideBottom', offset: -5 }}
+                />
+                <YAxis 
+                  label={{ value: 'Stress (MPa)', angle: -90, position: 'insideLeft' }}
+                />
+                <Tooltip 
+                  formatter={(value) => [`${typeof value === 'number' ? value.toFixed(1) : value} MPa`, 'Stress']}
+                  labelFormatter={(strain) => `Strain: ${strain}`}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="stress" 
+                  stroke="hsl(var(--accent))" 
+                  strokeWidth={3}
+                  dot={{ fill: 'hsl(var(--accent))', strokeWidth: 2, r: 4 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
 
       {materials.length > 1 && (
         <Card>
@@ -488,6 +557,30 @@ function AdvancedAnalysis({ selectedMaterial, simulationResults, materials }: an
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
                       vs {selectedMaterial.thermal.thermalConductivity} W/mK (database)
+                    </div>
+                  </Card>
+                )}
+                
+                {simulationResults.predictedProperties.thermal?.thermalStress && (
+                  <Card className="p-4">
+                    <div className="text-sm text-muted-foreground mb-1">Thermal Stress</div>
+                    <div className="text-2xl font-bold">
+                      {simulationResults.predictedProperties.thermal.thermalStress.toFixed(0)} MPa
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Temperature-induced stress
+                    </div>
+                  </Card>
+                )}
+                
+                {simulationResults.predictedProperties.mechanical?.creepRate && (
+                  <Card className="p-4">
+                    <div className="text-sm text-muted-foreground mb-1">Creep Rate</div>
+                    <div className="text-2xl font-bold">
+                      {simulationResults.predictedProperties.mechanical.creepRate.toExponential(2)}/yr
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Long-term deformation rate
                     </div>
                   </Card>
                 )}
