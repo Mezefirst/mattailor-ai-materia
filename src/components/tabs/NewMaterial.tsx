@@ -333,6 +333,7 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
                 />
               </div>
             </div>
+            </>
           )}
 
           <div className="flex gap-3">
