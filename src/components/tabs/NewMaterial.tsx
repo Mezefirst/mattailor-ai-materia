@@ -33,15 +33,41 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
       return;
     }
     
-    const remaining = 100 - selectedElements.reduce((sum, e) => sum + e.percentage, 0);
-    if (remaining <= 0) {
+    const currentTotal = selectedElements.reduce((sum, e) => sum + e.percentage, 0);
+    const defaultPercentage = Math.min(20, 100 - currentTotal);
+    
+    if (currentTotal >= 100) {
       toast.error(t.common.error, {
-        description: 'Total composition cannot exceed 100%'
+        description: 'Total composition is 100%. Remove an element or normalize first.'
       });
       return;
     }
     
-    setSelectedElements(prev => [...prev, { element, percentage: Math.min(remaining, 20) }]);
+    const newElement = { element, percentage: defaultPercentage };
+    const newElements = [...selectedElements, newElement];
+    const newTotal = newElements.reduce((sum, e) => sum + e.percentage, 0);
+    
+    // If adding this element would exceed 100%, suggest normalization
+    if (newTotal > 100) {
+      setSelectedElements(newElements);
+      toast.warning('Composition exceeds 100%', {
+        description: 'Click "Normalize" to automatically balance all elements.',
+        action: {
+          label: 'Auto-normalize',
+          onClick: () => {
+            const total = newElements.reduce((sum, e) => sum + e.percentage, 0);
+            setSelectedElements(newElements.map(item => ({
+              ...item,
+              percentage: parseFloat(((item.percentage / total) * 100).toFixed(2))
+            })));
+            toast.success('Composition auto-normalized to 100%');
+          }
+        }
+      });
+    } else {
+      setSelectedElements(newElements);
+      toast.success(`${element.symbol} (${element.name}) added with ${defaultPercentage}%`);
+    }
   };
 
   const removeElementFromComposition = (symbol: string) => {
@@ -49,9 +75,24 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
   };
 
   const updatePercentage = (index: number, percentage: number) => {
+    const roundedPercentage = Math.round(percentage * 100) / 100; // Round to 2 decimal places
     setSelectedElements(prev => prev.map((item, i) => 
-      i === index ? { ...item, percentage } : item
+      i === index ? { ...item, percentage: roundedPercentage } : item
     ));
+  };
+
+  const equalizePercentages = () => {
+    if (selectedElements.length === 0) return;
+    
+    const equalPercentage = parseFloat((100 / selectedElements.length).toFixed(2));
+    setSelectedElements(prev => prev.map(item => ({
+      ...item,
+      percentage: equalPercentage
+    })));
+    
+    toast.success('Equal distribution applied', {
+      description: `Each element now has ${equalPercentage}%`
+    });
   };
 
   const removeElement = (index: number) => {
@@ -59,18 +100,36 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
   };
 
   const normalizeComposition = () => {
-    if (selectedElements.length === 0) return;
+    if (selectedElements.length === 0) {
+      toast.error(t.common.error, {
+        description: 'No elements to normalize'
+      });
+      return;
+    }
     
     const total = selectedElements.reduce((sum, e) => sum + e.percentage, 0);
-    if (total === 0) return;
+    if (total === 0) {
+      toast.error(t.common.error, {
+        description: 'All elements have 0% composition'
+      });
+      return;
+    }
+    
+    // Check if already normalized
+    if (Math.abs(total - 100) < 0.01) {
+      toast.info('Composition already normalized', {
+        description: 'Total composition is already 100%'
+      });
+      return;
+    }
     
     setSelectedElements(prev => prev.map(item => ({
       ...item,
-      percentage: (item.percentage / total) * 100
+      percentage: parseFloat(((item.percentage / total) * 100).toFixed(2))
     })));
     
     toast.success(t.common.success, {
-      description: 'Composition normalized to 100%'
+      description: `Composition normalized from ${total.toFixed(1)}% to 100%`
     });
   };
 
@@ -84,9 +143,9 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
       return;
     }
     
-    if (Math.abs(totalPercentage - 100) > 0.1) {
+    if (Math.abs(totalPercentage - 100) > 0.01) {
       toast.error(t.common.error, {
-        description: 'Total composition must equal 100%'
+        description: 'Total composition must equal 100%. Click "Normalize" to fix this.'
       });
       return;
     }
@@ -267,23 +326,63 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
             <>
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <Label>{t.newMaterial.composition} ({totalPercentage.toFixed(1)}%)</Label>
+                  <Label className="text-base font-medium">
+                    {t.newMaterial.composition} ({totalPercentage.toFixed(2)}%)
+                  </Label>
                   <div className="flex items-center gap-2">
                     <Button
-                      variant="outline"
+                      variant={Math.abs(totalPercentage - 100) > 0.1 ? "default" : "outline"}
                       size="sm"
                       onClick={normalizeComposition}
                       className="flex items-center gap-1"
+                      disabled={selectedElements.length === 0}
                     >
                       <Lightning className="w-4 h-4" />
                       {t.newMaterial.normalize}
                     </Button>
-                    <Badge 
-                      variant={Math.abs(totalPercentage - 100) < 0.1 ? "default" : "destructive"}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={equalizePercentages}
+                      className="flex items-center gap-1"
+                      disabled={selectedElements.length === 0}
+                      title="Distribute equally among all elements"
                     >
-                      {Math.abs(totalPercentage - 100) < 0.1 ? "Balanced" : `${(100 - totalPercentage).toFixed(1)}% remaining`}
+                      ⚖️ Equal
+                    </Button>
+                    <Badge 
+                      variant={Math.abs(totalPercentage - 100) < 0.1 ? "default" : totalPercentage > 100 ? "destructive" : "secondary"}
+                    >
+                      {Math.abs(totalPercentage - 100) < 0.1 
+                        ? "✓ Normalized" 
+                        : totalPercentage > 100 
+                          ? `${(totalPercentage - 100).toFixed(1)}% over` 
+                          : `${(100 - totalPercentage).toFixed(1)}% remaining`
+                      }
                     </Badge>
                   </div>
+                </div>
+                
+                {/* Composition status indicator */}
+                <div className="mb-3">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                    <span>Composition Balance</span>
+                    <span>{totalPercentage.toFixed(2)}% / 100%</span>
+                  </div>
+                  <Progress 
+                    value={Math.min(100, totalPercentage)} 
+                    className="h-2"
+                  />
+                  {totalPercentage > 100 && (
+                    <p className="text-xs text-destructive mt-1">
+                      ⚠ Total exceeds 100%. Click "Normalize" to balance composition.
+                    </p>
+                  )}
+                  {totalPercentage < 99.9 && totalPercentage > 0 && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      💡 Consider normalizing to 100% for accurate material properties.
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-3 mt-2">
                   {selectedElements.map((item, index) => (
@@ -305,12 +404,24 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
                         value={[item.percentage]}
                         onValueChange={([value]) => updatePercentage(index, value)}
                         max={100}
-                        step={0.1}
+                        step={0.01}
                         className="flex-1"
                       />
-                      <span className="text-sm font-mono w-16 text-right">
-                        {item.percentage.toFixed(1)}%
-                      </span>
+                      <div className="flex items-center gap-1">
+                        <Input
+                          type="number"
+                          value={item.percentage.toFixed(2)}
+                          onChange={(e) => {
+                            const value = parseFloat(e.target.value) || 0;
+                            updatePercentage(index, Math.max(0, Math.min(100, value)));
+                          }}
+                          className="w-16 h-8 text-xs text-center font-mono"
+                          min="0"
+                          max="100"
+                          step="0.01"
+                        />
+                        <span className="text-xs text-muted-foreground">%</span>
+                      </div>
                     </div>
                     
                     <Button
