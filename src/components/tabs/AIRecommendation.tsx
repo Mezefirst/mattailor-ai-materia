@@ -30,15 +30,6 @@ export function AIRecommendation({ onMaterialsFound }: AIRecommendationProps) {
   const [query, setQuery] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [conversation, setConversation] = useState<Array<{
-
-  const exampleQueries = [
-    t.aiRecommendation.examples.marine,
-    t.aiRecommendation.examples.packaging,
-    t.aiRecommendation.examples.alloy,
-    "Recommend high-conductivity materials for electrical components",
-    "Find biocompatible materials for medical implants",
-    "Suggest sustainable materials for food packaging under $10/kg"
-  ];
     type: 'user' | 'ai';
     content: string;
     materials?: Material[];
@@ -48,6 +39,15 @@ export function AIRecommendation({ onMaterialsFound }: AIRecommendationProps) {
       content: 'Hello! I\'m your AI materials expert. Describe your application requirements and I\'ll recommend the best materials for your needs. You can specify mechanical properties, environmental conditions, budget constraints, or ask about specific material combinations.'
     }
   ]);
+
+  const exampleQueries = [
+    t.aiRecommendation.examples.marine,
+    t.aiRecommendation.examples.packaging,
+    t.aiRecommendation.examples.alloy,
+    "Recommend high-conductivity materials for electrical components",
+    "Find biocompatible materials for medical implants",
+    "Suggest sustainable materials for food packaging under $10/kg"
+  ];
 
   const processQuery = async () => {
     if (!query.trim()) {
