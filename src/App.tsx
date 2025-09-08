@@ -11,8 +11,10 @@ import { Sustainability } from '@/components/tabs/Sustainability';
 import { ExternalSearch } from '@/components/tabs/ExternalSearch';
 import { Settings } from '@/components/tabs/Settings';
 import { useKV } from '@github/spark/hooks';
+import { useTranslation } from '@/lib/i18n';
 
 function App() {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useKV('active-tab', 'overview');
   const [materials, setMaterials] = useKV('materials', []);
   const [selectedMaterial, setSelectedMaterial] = useKV('selected-material', null);
@@ -90,14 +92,14 @@ function App() {
               <SelectValue placeholder="Select a section" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="overview">Overview</SelectItem>
-              <SelectItem value="new-material">New Material</SelectItem>
-              <SelectItem value="ai-recommendation">AI Recommendation</SelectItem>
-              <SelectItem value="ml-enhanced">ML Enhanced</SelectItem>
-              <SelectItem value="properties">Properties</SelectItem>
-              <SelectItem value="sustainability">Sustainability</SelectItem>
-              <SelectItem value="external-search">External Search</SelectItem>
-              <SelectItem value="settings">Settings</SelectItem>
+              <SelectItem value="overview">{t.tabs.overview}</SelectItem>
+              <SelectItem value="new-material">{t.tabs.newMaterial}</SelectItem>
+              <SelectItem value="ai-recommendation">{t.tabs.aiRecommendation}</SelectItem>
+              <SelectItem value="ml-enhanced">{t.tabs.mlEnhanced}</SelectItem>
+              <SelectItem value="properties">{t.tabs.properties}</SelectItem>
+              <SelectItem value="sustainability">{t.tabs.sustainability}</SelectItem>
+              <SelectItem value="external-search">{t.tabs.externalSearch}</SelectItem>
+              <SelectItem value="settings">{t.tabs.settings}</SelectItem>
             </SelectContent>
           </Select>
         </div>

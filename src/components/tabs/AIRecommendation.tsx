@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { Material, MATERIALS_DATABASE, searchMaterials } from '@/data/materials';
 import { ExternalSearch } from '@/components/search/ExternalSearch';
 import { ExternalMaterial, materialDataSources } from '@/services/materialDataSources';
+import { useTranslation } from '@/lib/i18n';
 
 interface AIRecommendationProps {
   onMaterialsFound: (materials: Material[]) => void;
@@ -25,9 +26,19 @@ const exampleQueries = [
 ];
 
 export function AIRecommendation({ onMaterialsFound }: AIRecommendationProps) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [conversation, setConversation] = useState<Array<{
+
+  const exampleQueries = [
+    t.aiRecommendation.examples.marine,
+    t.aiRecommendation.examples.packaging,
+    t.aiRecommendation.examples.alloy,
+    "Recommend high-conductivity materials for electrical components",
+    "Find biocompatible materials for medical implants",
+    "Suggest sustainable materials for food packaging under $10/kg"
+  ];
     type: 'user' | 'ai';
     content: string;
     materials?: Material[];

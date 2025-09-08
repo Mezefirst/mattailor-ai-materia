@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ChartBar, TestTube, Atom, Lightning, MagnifyingGlass, Funnel } from '@phosphor-icons/react';
 import { Material, MATERIALS_DATABASE, searchMaterials, getUniqueCategories } from '@/data/materials';
+import { useTranslation } from '@/lib/i18n';
 
 // Calculate performance scores based on material properties
 const calculatePerformanceScore = (material: Material): number => {
@@ -39,6 +40,7 @@ interface OverviewProps {
 }
 
 export function Overview({ materials, selectedMaterial, onSelectMaterial }: OverviewProps) {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [displayMaterials, setDisplayMaterials] = useState<Material[]>(MATERIALS_DATABASE);
@@ -80,14 +82,14 @@ export function Overview({ materials, selectedMaterial, onSelectMaterial }: Over
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <MagnifyingGlass className="h-5 w-5" />
-            Material Database Explorer
+            {t.overview.title}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex gap-4">
             <div className="flex-1">
               <Input
-                placeholder="Search materials, applications, or properties..."
+                placeholder={`${t.common.search} materials, applications, or properties...`}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full"
@@ -96,7 +98,7 @@ export function Overview({ materials, selectedMaterial, onSelectMaterial }: Over
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
               <SelectTrigger className="w-48">
                 <Funnel className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Filter by category" />
+                <SelectValue placeholder={t.common.filter} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>

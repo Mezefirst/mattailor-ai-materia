@@ -7,16 +7,19 @@ import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { TestTube, Atom, Lightning, FlaskConical, Table } from '@phosphor-icons/react';
+import { TestTube, Atom, Lightning, FlaskConical, Table, Plus, Trash, PieChart } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import { Material } from '@/data/materials';
 import { PeriodicTable, Element } from '@/components/periodic/PeriodicTable';
+import { CompositionChart } from '@/components/charts/CompositionChart';
+import { useTranslation } from '@/lib/i18n';
 
 interface NewMaterialProps {
   onMaterialCreated: (material: Material) => void;
 }
 
 export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
+  const { t } = useTranslation();
   const [materialName, setMaterialName] = useState('');
   const [selectedElements, setSelectedElements] = useState<Array<{element: Element, percentage: number}>>([]);
   const [isSimulating, setIsSimulating] = useState(false);
@@ -24,13 +27,17 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
 
   const addElement = (element: Element) => {
     if (selectedElements.find(e => e.element.symbol === element.symbol)) {
-      toast.error('Element already added');
+      toast.error(t.common.error, {
+        description: `${element.symbol} already added`
+      });
       return;
     }
     
     const remaining = 100 - selectedElements.reduce((sum, e) => sum + e.percentage, 0);
     if (remaining <= 0) {
-      toast.error('Total composition cannot exceed 100%');
+      toast.error(t.common.error, {
+        description: 'Total composition cannot exceed 100%'
+      });
       return;
     }
     
@@ -51,16 +58,36 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
     setSelectedElements(prev => prev.filter((_, i) => i !== index));
   };
 
+  const normalizeComposition = () => {
+    if (selectedElements.length === 0) return;
+    
+    const total = selectedElements.reduce((sum, e) => sum + e.percentage, 0);
+    if (total === 0) return;
+    
+    setSelectedElements(prev => prev.map(item => ({
+      ...item,
+      percentage: (item.percentage / total) * 100
+    })));
+    
+    toast.success(t.common.success, {
+      description: 'Composition normalized to 100%'
+    });
+  };
+
   const totalPercentage = selectedElements.reduce((sum, e) => sum + e.percentage, 0);
 
   const simulateProperties = async () => {
     if (selectedElements.length === 0) {
-      toast.error('Please add at least one element');
+      toast.error(t.common.error, {
+        description: 'Please add at least one element'
+      });
       return;
     }
     
     if (Math.abs(totalPercentage - 100) > 0.1) {
-      toast.error('Total composition must equal 100%');
+      toast.error(t.common.error, {
+        description: 'Total composition must equal 100%'
+      });
       return;
     }
 
@@ -95,17 +122,23 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
     });
     
     setIsSimulating(false);
-    toast.success('Material properties simulated successfully');
+    toast.success(t.common.success, {
+      description: 'Material properties simulated successfully'
+    });
   };
 
   const createMaterial = () => {
     if (!materialName.trim()) {
-      toast.error('Please enter a material name');
+      toast.error(t.common.error, {
+        description: 'Please enter a material name'
+      });
       return;
     }
     
     if (!simulationResults) {
-      toast.error('Please simulate properties first');
+      toast.error(t.common.error, {
+        description: 'Please simulate properties first'
+      });
       return;
     }
 
@@ -176,7 +209,9 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
     };
 
     onMaterialCreated(newMaterial);
-    toast.success(`Material "${materialName}" created successfully`);
+    toast.success(t.common.success, {
+      description: `Material "${materialName}" created successfully`
+    });
     
     // Reset form
     setMaterialName('');
@@ -190,16 +225,15 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FlaskConical className="h-5 w-5" />
-            Design Custom Material
+            {t.newMaterial.title}
           </CardTitle>
           <p className="text-sm text-muted-foreground">
-            Create custom materials by selecting elements from the periodic table and adjusting their composition. 
-            The AI will predict material properties based on your element selection and percentages.
+            {t.newMaterial.description}
           </p>
         </CardHeader>
         <CardContent className="space-y-6">
           <div>
-            <Label htmlFor="material-name">Material Name</Label>
+            <Label htmlFor="material-name">{t.newMaterial.materialName}</Label>
             <Input
               id="material-name"
               placeholder="e.g. High-Strength Steel Alloy"
@@ -211,7 +245,7 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
           <div>
             <div className="flex items-center gap-2 mb-4">
               <Table className="h-5 w-5" />
-              <Label className="text-base font-medium">Periodic Table - Element Selection</Label>
+              <Label className="text-base font-medium">{t.newMaterial.periodicTable} - {t.newMaterial.selectElements}</Label>
             </div>
             <div className="mb-4 p-3 bg-muted/50 rounded-lg">
               <p className="text-sm text-muted-foreground mb-2">
@@ -230,21 +264,33 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
           </div>
 
           {selectedElements.length > 0 && (
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <Label>Material Composition ({totalPercentage.toFixed(1)}%)</Label>
-                <Badge 
-                  variant={Math.abs(totalPercentage - 100) < 0.1 ? "default" : "destructive"}
-                >
-                  {Math.abs(totalPercentage - 100) < 0.1 ? "Balanced" : `${(100 - totalPercentage).toFixed(1)}% remaining`}
-                </Badge>
-              </div>
-              <div className="space-y-3 mt-2">
-                {selectedElements.map((item, index) => (
-                  <div key={item.element.symbol} className="flex items-center gap-4 p-3 border rounded-lg bg-card">
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <Badge variant="outline" className="font-mono">
-                        {item.element.symbol}
+            <>
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <Label>{t.newMaterial.composition} ({totalPercentage.toFixed(1)}%)</Label>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={normalizeComposition}
+                      className="flex items-center gap-1"
+                    >
+                      <Lightning className="w-4 h-4" />
+                      {t.newMaterial.normalize}
+                    </Button>
+                    <Badge 
+                      variant={Math.abs(totalPercentage - 100) < 0.1 ? "default" : "destructive"}
+                    >
+                      {Math.abs(totalPercentage - 100) < 0.1 ? "Balanced" : `${(100 - totalPercentage).toFixed(1)}% remaining`}
+                    </Badge>
+                  </div>
+                </div>
+                <div className="space-y-3 mt-2">
+                  {selectedElements.map((item, index) => (
+                    <div key={item.element.symbol} className="flex items-center gap-4 p-3 border rounded-lg bg-card">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <Badge variant="outline" className="font-mono">
+                          {item.element.symbol}
                       </Badge>
                       <div className="flex flex-col">
                         <span className="text-sm font-medium">{item.element.name}</span>
@@ -273,10 +319,18 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
                       onClick={() => removeElement(index)}
                       className="text-destructive hover:text-destructive"
                     >
-                      ×
+                      <Trash className="w-4 h-4" />
                     </Button>
                   </div>
                 ))}
+              </div>
+              
+              {/* Composition Visualization */}
+              <div className="mt-4">
+                <CompositionChart 
+                  data={selectedElements} 
+                  title={t.newMaterial.visualize}
+                />
               </div>
             </div>
           )}
@@ -290,12 +344,12 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
               {isSimulating ? (
                 <>
                   <Lightning className="mr-2 h-4 w-4 animate-pulse" />
-                  Simulating...
+                  {t.common.loading}
                 </>
               ) : (
                 <>
                   <TestTube className="mr-2 h-4 w-4" />
-                  Simulate Properties
+                  {t.properties.simulate}
                 </>
               )}
             </Button>
@@ -305,7 +359,8 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
               disabled={!simulationResults || !materialName.trim()}
               variant="outline"
             >
-              Create Material
+              <Plus className="mr-2 h-4 w-4" />
+              {t.newMaterial.createMaterial}
             </Button>
           </div>
         </CardContent>
@@ -322,10 +377,10 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
           <CardContent>
             <div className="grid gap-6 md:grid-cols-2">
               <div>
-                <h4 className="font-medium mb-3">Performance Scores</h4>
+                <h4 className="font-medium mb-3">{t.common.performance} Scores</h4>
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm">Performance</span>
+                    <span className="text-sm">{t.common.performance}</span>
                     <div className="flex items-center gap-2">
                       <Progress value={simulationResults.performanceScore} className="w-20" />
                       <span className="text-sm font-medium">{simulationResults.performanceScore.toFixed(0)}%</span>
@@ -339,7 +394,7 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
                     </div>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm">Sustainability</span>
+                    <span className="text-sm">{t.common.sustainability}</span>
                     <div className="flex items-center gap-2">
                       <Progress value={simulationResults.sustainabilityScore} className="w-20" />
                       <span className="text-sm font-medium">{simulationResults.sustainabilityScore.toFixed(0)}%</span>

@@ -3,34 +3,46 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { APIConfig } from '@/components/settings/APIConfig';
-import { Settings as SettingsIcon, Key, Database, Info } from '@phosphor-icons/react';
+import { LanguageSettings } from '@/components/settings/LanguageSettings';
+import { Settings as SettingsIcon, Key, Database, Info, Translate } from '@phosphor-icons/react';
+import { useTranslation } from '@/lib/i18n';
 
 export function Settings() {
+  const { t } = useTranslation();
+  
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <SettingsIcon className="w-5 h-5" />
-            Settings
+            {t.settings.title}
           </CardTitle>
           <CardDescription>
-            Configure MatTailor AI settings and external integrations
+            {t.settings.description}
           </CardDescription>
         </CardHeader>
       </Card>
 
-      <Tabs defaultValue="api-config" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+      <Tabs defaultValue="language" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="language" className="flex items-center gap-2">
+            <Translate className="w-4 h-4" />
+            {t.settings.language}
+          </TabsTrigger>
           <TabsTrigger value="api-config" className="flex items-center gap-2">
             <Key className="w-4 h-4" />
-            API Configuration
+            {t.settings.apiConfiguration}
           </TabsTrigger>
           <TabsTrigger value="about" className="flex items-center gap-2">
             <Info className="w-4 h-4" />
-            About
+            {t.settings.about}
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="language" className="mt-6">
+          <LanguageSettings />
+        </TabsContent>
 
         <TabsContent value="api-config" className="mt-6">
           <APIConfig />
@@ -42,7 +54,7 @@ export function Settings() {
               <CardHeader>
                 <CardTitle>MatTailor AI</CardTitle>
                 <CardDescription>
-                  Intelligent Material Discovery Platform
+                  {t.header.subtitle}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -59,7 +71,7 @@ export function Settings() {
                 </div>
 
                 <div className="space-y-3">
-                  <h4 className="font-medium">Key Features</h4>
+                  <h4 className="font-medium">{t.settings.keyFeatures}</h4>
                   <ul className="text-sm space-y-1 list-disc list-inside text-muted-foreground">
                     <li>AI-powered material recommendations</li>
                     <li>Custom material property simulation</li>
@@ -71,7 +83,7 @@ export function Settings() {
                 </div>
 
                 <div className="space-y-3">
-                  <h4 className="font-medium">Supported Data Sources</h4>
+                  <h4 className="font-medium">{t.settings.supportedDataSources}</h4>
                   <div className="grid gap-3 md:grid-cols-2">
                     <div className="p-3 border rounded-lg">
                       <div className="flex items-center gap-2 mb-2">
@@ -96,7 +108,7 @@ export function Settings() {
 
                 <div className="pt-4 border-t text-xs text-muted-foreground">
                   <p>
-                    Version 1.0.0 • Built with modern web technologies for optimal performance
+                    {t.settings.version} 1.0.0 • Built with modern web technologies for optimal performance
                   </p>
                 </div>
               </CardContent>
