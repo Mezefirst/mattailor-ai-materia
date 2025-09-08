@@ -12,6 +12,8 @@ import { toast } from 'sonner';
 import { Material } from '@/data/materials';
 import { PeriodicTable, Element } from '@/components/periodic/PeriodicTable';
 import { CompositionChart } from '@/components/charts/CompositionChart';
+import { RealTimeProperties } from '@/components/prediction/RealTimeProperties';
+import { usePropertyPrediction } from '@/hooks/usePropertyPrediction';
 import { useTranslation } from '@/lib/i18n';
 
 interface NewMaterialProps {
@@ -24,6 +26,9 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
   const [selectedElements, setSelectedElements] = useState<Array<{element: Element, percentage: number}>>([]);
   const [isSimulating, setIsSimulating] = useState(false);
   const [simulationResults, setSimulationResults] = useState<any>(null);
+
+  // Real-time property prediction
+  const { prediction, isCalculating } = usePropertyPrediction(selectedElements, 500);
 
   const addElement = (element: Element) => {
     if (selectedElements.find(e => e.element.symbol === element.symbol)) {
@@ -153,32 +158,52 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
     setIsSimulating(true);
     
     // Simulate AI processing delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 1500));
     
-    // Mock property calculations based on composition
-    const hasIron = selectedElements.find(e => e.element.symbol === 'Fe');
-    const hasCarbon = selectedElements.find(e => e.element.symbol === 'C');
-    const hasAluminum = selectedElements.find(e => e.element.symbol === 'Al');
-    
-    const properties = {
-      tensileStrength: hasIron ? 400 + (hasCarbon?.percentage || 0) * 10 : hasAluminum ? 300 : 250,
-      density: hasIron ? 7.8 - (hasAluminum?.percentage || 0) * 0.05 : hasAluminum ? 2.7 : 5.0,
-      thermalConductivity: hasAluminum ? 200 - (hasIron?.percentage || 0) * 1.5 : 80,
-      electricalConductivity: selectedElements.find(e => e.element.symbol === 'Cu') ? 60 : hasAluminum ? 38 : 10,
-    };
-    
-    const performanceScore = Math.min(95, Math.max(60, properties.tensileStrength / 10 + Math.random() * 10));
-    const costScore = Math.min(95, Math.max(40, 100 - (properties.density * 8) + Math.random() * 15));
-    const sustainabilityScore = Math.min(95, Math.max(50, hasAluminum ? 85 : 70 + Math.random() * 10));
-    
-    setSimulationResults({
-      properties,
-      performanceScore,
-      costScore,
-      sustainabilityScore,
-      overallScore: (performanceScore + costScore + sustainabilityScore) / 3,
-      confidence: Math.min(95, 70 + selectedElements.length * 5),
-    });
+    // Use the real-time prediction results if available
+    if (prediction && prediction.isValid) {
+      const properties = prediction.properties;
+      const scores = prediction.scores;
+      
+      setSimulationResults({
+        properties: {
+          tensileStrength: properties.tensileStrength,
+          density: properties.density,
+          thermalConductivity: properties.thermalConductivity,
+          electricalConductivity: properties.electricalConductivity,
+        },
+        performanceScore: scores.performanceScore,
+        costScore: scores.costScore,
+        sustainabilityScore: scores.sustainabilityScore,
+        overallScore: scores.overallScore,
+        confidence: scores.confidence,
+      });
+    } else {
+      // Fallback to basic calculation
+      const hasIron = selectedElements.find(e => e.element.symbol === 'Fe');
+      const hasCarbon = selectedElements.find(e => e.element.symbol === 'C');
+      const hasAluminum = selectedElements.find(e => e.element.symbol === 'Al');
+      
+      const properties = {
+        tensileStrength: hasIron ? 400 + (hasCarbon?.percentage || 0) * 10 : hasAluminum ? 300 : 250,
+        density: hasIron ? 7.8 - (hasAluminum?.percentage || 0) * 0.05 : hasAluminum ? 2.7 : 5.0,
+        thermalConductivity: hasAluminum ? 200 - (hasIron?.percentage || 0) * 1.5 : 80,
+        electricalConductivity: selectedElements.find(e => e.element.symbol === 'Cu') ? 60 : hasAluminum ? 38 : 10,
+      };
+      
+      const performanceScore = Math.min(95, Math.max(60, properties.tensileStrength / 10 + Math.random() * 10));
+      const costScore = Math.min(95, Math.max(40, 100 - (properties.density * 8) + Math.random() * 15));
+      const sustainabilityScore = Math.min(95, Math.max(50, hasAluminum ? 85 : 70 + Math.random() * 10));
+      
+      setSimulationResults({
+        properties,
+        performanceScore,
+        costScore,
+        sustainabilityScore,
+        overallScore: (performanceScore + costScore + sustainabilityScore) / 3,
+        confidence: Math.min(95, 70 + selectedElements.length * 5),
+      });
+    }
     
     setIsSimulating(false);
     toast.success(t.common.success, {
@@ -194,9 +219,13 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
       return;
     }
     
-    if (!simulationResults) {
+    // Use real-time prediction if available, otherwise require simulation
+    const propertiesToUse = prediction && prediction.isValid ? prediction.properties : simulationResults?.properties;
+    const scoresToUse = prediction && prediction.isValid ? prediction.scores : simulationResults;
+    
+    if (!propertiesToUse) {
       toast.error(t.common.error, {
-        description: 'Please simulate properties first'
+        description: 'Please wait for property calculations or run simulation'
       });
       return;
     }
@@ -208,19 +237,19 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
       subcategory: 'custom alloy',
       
       mechanical: {
-        tensileStrength: Math.round(simulationResults.properties.tensileStrength),
-        yieldStrength: Math.round(simulationResults.properties.tensileStrength * 0.8),
-        elasticModulus: 200,
-        hardness: 250,
-        density: Math.round(simulationResults.properties.density * 1000),
+        tensileStrength: Math.round(propertiesToUse.tensileStrength || 250),
+        yieldStrength: Math.round((propertiesToUse.yieldStrength || propertiesToUse.tensileStrength * 0.8) || 200),
+        elasticModulus: Math.round(propertiesToUse.elasticModulus || 200),
+        hardness: Math.round(propertiesToUse.hardness || 250),
+        density: Math.round((propertiesToUse.density || 5.0) * 1000),
         poissonRatio: 0.3,
-        fatigueLimit: Math.round(simulationResults.properties.tensileStrength * 0.4),
+        fatigueLimit: Math.round((propertiesToUse.tensileStrength || 250) * 0.4),
         fractureToughness: 50
       },
       
       thermal: {
-        meltingPoint: 1500,
-        thermalConductivity: Math.round(simulationResults.properties.thermalConductivity),
+        meltingPoint: Math.round(propertiesToUse.meltingPoint || 1500),
+        thermalConductivity: Math.round(propertiesToUse.thermalConductivity || 80),
         thermalExpansion: 12,
         specificHeat: 500,
         maxServiceTemp: 400
@@ -228,7 +257,7 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
       
       electrical: {
         resistivity: 1e-6,
-        conductivity: simulationResults.properties.electricalConductivity * 1e6
+        conductivity: (propertiesToUse.electricalConductivity || 10) * 1e6
       },
       
       chemical: {
@@ -249,7 +278,7 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
       sustainability: {
         recyclability: 'good',
         carbonFootprint: 8.0,
-        sustainabilityScore: Math.round(simulationResults.sustainabilityScore / 10),
+        sustainabilityScore: Math.round((scoresToUse?.sustainabilityScore || 70) / 10),
         eolOptions: ['recycling', 'remelting']
       },
       
@@ -452,6 +481,7 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
               onClick={simulateProperties}
               disabled={isSimulating || selectedElements.length === 0}
               className="flex-1"
+              variant="outline"
             >
               {isSimulating ? (
                 <>
@@ -461,15 +491,15 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
               ) : (
                 <>
                   <TestTube className="mr-2 h-4 w-4" />
-                  {t.properties.simulate}
+                  Full Simulation
                 </>
               )}
             </Button>
             
             <Button 
               onClick={createMaterial}
-              disabled={!simulationResults || !materialName.trim()}
-              variant="outline"
+              disabled={!prediction?.isValid && !simulationResults || !materialName.trim()}
+              className="flex-1"
             >
               <Plus className="mr-2 h-4 w-4" />
               {t.newMaterial.createMaterial}
@@ -478,10 +508,16 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
         </CardContent>
       </Card>
 
+      {/* Real-time Property Prediction */}
+      <RealTimeProperties 
+        prediction={prediction}
+        isCalculating={isCalculating}
+      />
+
       {simulationResults && (
         <Card>
           <CardHeader>
-            <CardTitle>Simulation Results</CardTitle>
+            <CardTitle>Full Simulation Results</CardTitle>
             <Badge variant="outline">
               Confidence: {simulationResults.confidence}%
             </Badge>
