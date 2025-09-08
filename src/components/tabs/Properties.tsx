@@ -6,7 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
-import { TestTube, ChartLine, Thermometer, Lightning, Atom, FlaskConical, Calculator, BarChart3, Lightbulb } from '@phosphor-icons/react';
+import { TestTube, ChartLine, Thermometer, Lightning, Atom, FlaskConical, Calculator, BarChart3, Lightbulb, ArrowUp, ArrowDown } from '@phosphor-icons/react';
 import { Material } from '@/data/materials';
 import { SimulationTools } from '@/components/simulation/SimulationTools';
 import { SimulationResults } from '@/services/simulation';
@@ -36,12 +36,32 @@ export function Properties({ selectedMaterial, materials }: PropertiesProps) {
   ] : [];
 
   const pressureData = selectedMaterial ? [
-    { pressure: 0.1, strength: selectedMaterial.mechanical.tensileStrength, modulus: selectedMaterial.mechanical.elasticModulus },
-    { pressure: 1, strength: selectedMaterial.mechanical.tensileStrength * 1.02, modulus: selectedMaterial.mechanical.elasticModulus * 1.01 },
-    { pressure: 10, strength: selectedMaterial.mechanical.tensileStrength * 1.05, modulus: selectedMaterial.mechanical.elasticModulus * 1.02 },
-    { pressure: 100, strength: selectedMaterial.mechanical.tensileStrength * 1.15, modulus: selectedMaterial.mechanical.elasticModulus * 1.05 },
-    { pressure: 500, strength: selectedMaterial.mechanical.tensileStrength * 1.25, modulus: selectedMaterial.mechanical.elasticModulus * 1.1 },
-    { pressure: 1000, strength: selectedMaterial.mechanical.tensileStrength * 1.35, modulus: selectedMaterial.mechanical.elasticModulus * 1.15 },
+    { pressure: 0.1, strength: selectedMaterial.mechanical.tensileStrength, modulus: selectedMaterial.mechanical.elasticModulus, ductility: 100, toughness: 100 },
+    { pressure: 1, strength: selectedMaterial.mechanical.tensileStrength * 1.02, modulus: selectedMaterial.mechanical.elasticModulus * 1.01, ductility: 98, toughness: 102 },
+    { pressure: 10, strength: selectedMaterial.mechanical.tensileStrength * 1.05, modulus: selectedMaterial.mechanical.elasticModulus * 1.02, ductility: 95, toughness: 105 },
+    { pressure: 100, strength: selectedMaterial.mechanical.tensileStrength * 1.15, modulus: selectedMaterial.mechanical.elasticModulus * 1.05, ductility: 88, toughness: 115 },
+    { pressure: 500, strength: selectedMaterial.mechanical.tensileStrength * 1.25, modulus: selectedMaterial.mechanical.elasticModulus * 1.1, ductility: 80, toughness: 125 },
+    { pressure: 1000, strength: selectedMaterial.mechanical.tensileStrength * 1.35, modulus: selectedMaterial.mechanical.elasticModulus * 1.15, ductility: 72, toughness: 135 },
+    { pressure: 2000, strength: selectedMaterial.mechanical.tensileStrength * 1.45, modulus: selectedMaterial.mechanical.elasticModulus * 1.22, ductility: 65, toughness: 145 },
+    { pressure: 5000, strength: selectedMaterial.mechanical.tensileStrength * 1.65, modulus: selectedMaterial.mechanical.elasticModulus * 1.35, ductility: 55, toughness: 160 },
+  ] : [];
+
+  // Pressure-temperature interaction data
+  const pressureTempData = selectedMaterial ? [
+    { pressure: 0.1, temp200: selectedMaterial.mechanical.tensileStrength * 0.9, temp400: selectedMaterial.mechanical.tensileStrength * 0.8, temp600: selectedMaterial.mechanical.tensileStrength * 0.65 },
+    { pressure: 100, temp200: selectedMaterial.mechanical.tensileStrength * 1.05, temp400: selectedMaterial.mechanical.tensileStrength * 0.92, temp600: selectedMaterial.mechanical.tensileStrength * 0.75 },
+    { pressure: 500, temp200: selectedMaterial.mechanical.tensileStrength * 1.15, temp400: selectedMaterial.mechanical.tensileStrength * 1.02, temp600: selectedMaterial.mechanical.tensileStrength * 0.85 },
+    { pressure: 1000, temp200: selectedMaterial.mechanical.tensileStrength * 1.25, temp400: selectedMaterial.mechanical.tensileStrength * 1.12, temp600: selectedMaterial.mechanical.tensileStrength * 0.95 },
+    { pressure: 2000, temp200: selectedMaterial.mechanical.tensileStrength * 1.35, temp400: selectedMaterial.mechanical.tensileStrength * 1.22, temp600: selectedMaterial.mechanical.tensileStrength * 1.05 },
+  ] : [];
+
+  // Hydrostatic vs deviatoric stress effects
+  const stressTypeData = selectedMaterial ? [
+    { pressure: 0.1, hydrostatic: selectedMaterial.mechanical.tensileStrength, deviatoric: selectedMaterial.mechanical.tensileStrength * 0.95, triaxial: selectedMaterial.mechanical.tensileStrength * 1.1 },
+    { pressure: 100, hydrostatic: selectedMaterial.mechanical.tensileStrength * 1.15, deviatoric: selectedMaterial.mechanical.tensileStrength * 1.05, triaxial: selectedMaterial.mechanical.tensileStrength * 1.25 },
+    { pressure: 500, hydrostatic: selectedMaterial.mechanical.tensileStrength * 1.25, deviatoric: selectedMaterial.mechanical.tensileStrength * 1.15, triaxial: selectedMaterial.mechanical.tensileStrength * 1.45 },
+    { pressure: 1000, hydrostatic: selectedMaterial.mechanical.tensileStrength * 1.35, deviatoric: selectedMaterial.mechanical.tensileStrength * 1.25, triaxial: selectedMaterial.mechanical.tensileStrength * 1.65 },
+    { pressure: 2000, hydrostatic: selectedMaterial.mechanical.tensileStrength * 1.45, deviatoric: selectedMaterial.mechanical.tensileStrength * 1.35, triaxial: selectedMaterial.mechanical.tensileStrength * 1.85 },
   ] : [];
 
   const stressStrainData = selectedMaterial ? [
@@ -142,6 +162,8 @@ export function Properties({ selectedMaterial, materials }: PropertiesProps) {
               setSelectedComparison={setSelectedComparison}
               temperatureData={temperatureData}
               pressureData={pressureData}
+              pressureTempData={pressureTempData}
+              stressTypeData={stressTypeData}
               stressStrainData={stressStrainData}
               getRadarData={getRadarData}
               calculatePerformanceScore={calculatePerformanceScore}
@@ -177,6 +199,8 @@ function PropertyOverview({
   setSelectedComparison, 
   temperatureData, 
   pressureData,
+  pressureTempData,
+  stressTypeData,
   stressStrainData,
   getRadarData,
   calculatePerformanceScore,
@@ -363,7 +387,15 @@ function PropertyOverview({
                     label={{ value: 'Property Value', angle: -90, position: 'insideLeft' }}
                   />
                   <Tooltip 
-                    formatter={(value, name) => [`${typeof value === 'number' ? value.toFixed(1) : value}${name === 'strength' ? ' MPa' : ' GPa'}`, name === 'strength' ? 'Strength' : 'Modulus']}
+                    formatter={(value, name) => {
+                      let unit = '';
+                      let label = '';
+                      if (name === 'strength') { unit = ' MPa'; label = 'Tensile Strength'; }
+                      else if (name === 'modulus') { unit = ' GPa'; label = 'Elastic Modulus'; }
+                      else if (name === 'ductility') { unit = '%'; label = 'Ductility'; }
+                      else if (name === 'toughness') { unit = '%'; label = 'Toughness'; }
+                      return [`${typeof value === 'number' ? value.toFixed(1) : value}${unit}`, label];
+                    }}
                     labelFormatter={(pressure) => `Pressure: ${pressure} MPa`}
                   />
                   <Line 
@@ -380,12 +412,30 @@ function PropertyOverview({
                     strokeWidth={2}
                     name="modulus"
                   />
+                  <Line 
+                    type="monotone" 
+                    dataKey="ductility" 
+                    stroke="hsl(var(--cost))" 
+                    strokeWidth={2}
+                    strokeDasharray="5 5"
+                    name="ductility"
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="toughness" 
+                    stroke="hsl(var(--sustainability))" 
+                    strokeWidth={2}
+                    strokeDasharray="3 3"
+                    name="toughness"
+                  />
                 </LineChart>
               </ResponsiveContainer>
             </div>
             <div className="mt-4 text-sm text-muted-foreground">
               <p>• Most materials strengthen under hydrostatic pressure</p>
               <p>• Elastic modulus increases with pressure compression</p>
+              <p>• Ductility typically decreases under high pressure</p>
+              <p>• Toughness often increases due to strengthening effects</p>
             </div>
           </CardContent>
         </Card>
@@ -420,6 +470,244 @@ function PropertyOverview({
                 />
               </LineChart>
             </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Advanced Pressure Analysis Charts */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Thermometer className="h-5 w-5" />
+              Pressure-Temperature Interaction
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={pressureTempData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="pressure" 
+                    scale="log"
+                    domain={['dataMin', 'dataMax']}
+                    label={{ value: 'Pressure (MPa)', position: 'insideBottom', offset: -5 }}
+                  />
+                  <YAxis 
+                    label={{ value: 'Tensile Strength (MPa)', angle: -90, position: 'insideLeft' }}
+                  />
+                  <Tooltip 
+                    formatter={(value, name) => {
+                      const temp = name === 'temp200' ? '200°C' : name === 'temp400' ? '400°C' : '600°C';
+                      return [`${typeof value === 'number' ? value.toFixed(1) : value} MPa`, `At ${temp}`];
+                    }}
+                    labelFormatter={(pressure) => `Pressure: ${pressure} MPa`}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="temp200" 
+                    stroke="hsl(var(--performance))" 
+                    strokeWidth={2}
+                    name="temp200"
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="temp400" 
+                    stroke="hsl(var(--cost))" 
+                    strokeWidth={2}
+                    name="temp400"
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="temp600" 
+                    stroke="hsl(var(--destructive))" 
+                    strokeWidth={2}
+                    name="temp600"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="mt-4 text-sm text-muted-foreground">
+              <p>• Pressure can offset some temperature-induced strength loss</p>
+              <p>• High temperature + high pressure creates complex behavior</p>
+              <p>• Material selection depends on operating conditions</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Atom className="h-5 w-5" />
+              Stress State Effects
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={stressTypeData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="pressure" 
+                    scale="log"
+                    domain={['dataMin', 'dataMax']}
+                    label={{ value: 'Pressure (MPa)', position: 'insideBottom', offset: -5 }}
+                  />
+                  <YAxis 
+                    label={{ value: 'Effective Strength (MPa)', angle: -90, position: 'insideLeft' }}
+                  />
+                  <Tooltip 
+                    formatter={(value, name) => {
+                      const labels = {
+                        hydrostatic: 'Hydrostatic Compression',
+                        deviatoric: 'Deviatoric Stress', 
+                        triaxial: 'Triaxial Compression'
+                      };
+                      return [`${typeof value === 'number' ? value.toFixed(1) : value} MPa`, labels[name as keyof typeof labels]];
+                    }}
+                    labelFormatter={(pressure) => `Confining Pressure: ${pressure} MPa`}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="hydrostatic" 
+                    stroke="hsl(var(--primary))" 
+                    strokeWidth={2}
+                    name="hydrostatic"
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="deviatoric" 
+                    stroke="hsl(var(--accent))" 
+                    strokeWidth={2}
+                    strokeDasharray="5 5"
+                    name="deviatoric"
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="triaxial" 
+                    stroke="hsl(var(--scientific))" 
+                    strokeWidth={2}
+                    strokeDasharray="3 3"
+                    name="triaxial"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="mt-4 text-sm text-muted-foreground">
+              <p>• Hydrostatic pressure increases material strength</p>
+              <p>• Deviatoric stress causes material failure</p>
+              <p>• Triaxial compression shows maximum strengthening</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Pressure Effects Summary */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5" />
+            Pressure Effects Summary for {selectedMaterial.name}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-6 md:grid-cols-3">
+            <div className="space-y-4">
+              <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Mechanical Properties</h4>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-accent"></div>
+                    <span className="text-sm">Tensile Strength</span>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-medium text-green-600">+35% at 1 GPa</div>
+                    <div className="text-xs text-muted-foreground">Significant increase</div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-scientific"></div>
+                    <span className="text-sm">Elastic Modulus</span>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-medium text-green-600">+15% at 1 GPa</div>
+                    <div className="text-xs text-muted-foreground">Moderate increase</div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-cost"></div>
+                    <span className="text-sm">Ductility</span>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-medium text-orange-600">-28% at 1 GPa</div>
+                    <div className="text-xs text-muted-foreground">Reduced plasticity</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Failure Mechanisms</h4>
+              <div className="space-y-3">
+                <div className="p-3 border rounded-lg bg-muted/30">
+                  <div className="text-sm font-medium mb-1">Brittle Fracture</div>
+                  <div className="text-xs text-muted-foreground">Suppressed under pressure</div>
+                  <Progress value={25} className="mt-2 h-2" />
+                </div>
+                
+                <div className="p-3 border rounded-lg bg-muted/30">
+                  <div className="text-sm font-medium mb-1">Plastic Deformation</div>
+                  <div className="text-xs text-muted-foreground">Reduced ductility</div>
+                  <Progress value={60} className="mt-2 h-2" />
+                </div>
+                
+                <div className="p-3 border rounded-lg bg-muted/30">
+                  <div className="text-sm font-medium mb-1">Creep Rate</div>
+                  <div className="text-xs text-muted-foreground">Slower at high pressure</div>
+                  <Progress value={35} className="mt-2 h-2" />
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Application Insights</h4>
+              <div className="space-y-3">
+                <div className="p-3 border rounded-lg bg-blue-50 border-blue-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Lightbulb className="h-4 w-4 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-900">Deep Sea Applications</span>
+                  </div>
+                  <div className="text-xs text-blue-700">
+                    Excellent strength retention under extreme pressure
+                  </div>
+                </div>
+                
+                <div className="p-3 border rounded-lg bg-green-50 border-green-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Lightbulb className="h-4 w-4 text-green-600" />
+                    <span className="text-sm font-medium text-green-900">High Pressure Processing</span>
+                  </div>
+                  <div className="text-xs text-green-700">
+                    Consider reduced ductility in forming operations
+                  </div>
+                </div>
+                
+                <div className="p-3 border rounded-lg bg-amber-50 border-amber-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Lightbulb className="h-4 w-4 text-amber-600" />
+                    <span className="text-sm font-medium text-amber-900">Safety Margins</span>
+                  </div>
+                  <div className="text-xs text-amber-700">
+                    Account for embrittlement at very high pressures
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
