@@ -10,13 +10,15 @@ import { TestTube, ChartLine, Thermometer, Lightning, Atom, FlaskConical, Calcul
 import { Material } from '@/data/materials';
 import { SimulationTools } from '@/components/simulation/SimulationTools';
 import { SimulationResults } from '@/services/simulation';
+import { MaterialUpgrade } from '@/components/upgrade/MaterialUpgrade';
 
 interface PropertiesProps {
   selectedMaterial: Material | null;
   materials: Material[];
+  onMaterialUpdated?: (material: Material) => void;
 }
 
-export function Properties({ selectedMaterial, materials }: PropertiesProps) {
+export function Properties({ selectedMaterial, materials, onMaterialUpdated }: PropertiesProps) {
   const [selectedComparison, setSelectedComparison] = useState<string>('');
   const [simulationType, setSimulationType] = useState<string>('mechanical');
   const [activeTab, setActiveTab] = useState('overview');
@@ -139,7 +141,7 @@ export function Properties({ selectedMaterial, materials }: PropertiesProps) {
         </Card>
       ) : (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <FlaskConical className="h-4 w-4" />
               Property Overview
@@ -147,6 +149,10 @@ export function Properties({ selectedMaterial, materials }: PropertiesProps) {
             <TabsTrigger value="simulation" className="flex items-center gap-2">
               <Calculator className="h-4 w-4" />
               AI Simulation
+            </TabsTrigger>
+            <TabsTrigger value="upgrade" className="flex items-center gap-2">
+              <Lightbulb className="h-4 w-4" />
+              Material Upgrade
             </TabsTrigger>
             <TabsTrigger value="analysis" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
@@ -175,6 +181,17 @@ export function Properties({ selectedMaterial, materials }: PropertiesProps) {
             <SimulationTools 
               selectedMaterial={selectedMaterial}
               onSimulationComplete={handleSimulationComplete}
+            />
+          </TabsContent>
+
+          <TabsContent value="upgrade" className="space-y-6">
+            <MaterialUpgrade 
+              selectedMaterial={selectedMaterial}
+              onUpgradeComplete={(upgradedMaterial) => {
+                if (onMaterialUpdated) {
+                  onMaterialUpdated(upgradedMaterial);
+                }
+              }}
             />
           </TabsContent>
 

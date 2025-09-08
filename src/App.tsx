@@ -53,6 +53,7 @@ function App() {
           <Properties 
             selectedMaterial={selectedMaterial}
             materials={materials}
+            onMaterialUpdated={(material) => setMaterials(prev => [...prev, material])}
           />
         );
       case 'sustainability':
