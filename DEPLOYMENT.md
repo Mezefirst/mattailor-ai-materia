@@ -1,246 +1,240 @@
-# MatTailor AI Deployment Guide
+# MatTailor AI - Deployment Guide
 
-## Quick Deploy Options
+This guide covers various deployment options for the MatTailor AI application using Docker.
 
-### Frontend Deployment
+## Quick Start with Docker
 
-#### Vercel (Recommended)
-1. Connect your GitHub repository to Vercel
-2. Set build command: `npm run build`
-3. Set output directory: `dist`
-4. Add environment variables:
-   ```
-   VITE_API_URL=https://your-backend-url.com
-   VITE_ENVIRONMENT=production
-   ```
-5. Deploy automatically on git push
+### Production Deployment
 
-#### Netlify
-1. Connect repository to Netlify
-2. Build settings:
-   - Build command: `npm run build`
-   - Publish directory: `dist`
-3. Environment variables:
-   ```
-   VITE_API_URL=https://your-backend-url.com
-   VITE_ENVIRONMENT=production
-   ```
-
-### Backend Deployment
-
-#### Railway (Recommended)
-1. Connect GitHub repository
-2. Select backend folder as root
-3. Railway will auto-detect Python and install requirements
-4. Set environment variables:
-   ```
-   ENVIRONMENT=production
-   SECRET_KEY=your-secret-key
-   OPENAI_API_KEY=your-openai-key (optional)
-   ```
-
-#### Heroku
-1. Install Heroku CLI
-2. Create app: `heroku create mattailor-backend`
-3. Set buildpack: `heroku buildpacks:set heroku/python`
-4. Configure environment variables:
-   ```bash
-   heroku config:set ENVIRONMENT=production
-   heroku config:set SECRET_KEY=your-secret-key
-   ```
-5. Deploy: `git push heroku main`
-
-#### Google Cloud Run
-1. Build image: `docker build -t mattailor-backend ./backend`
-2. Tag for GCR: `docker tag mattailor-backend gcr.io/PROJECT_ID/mattailor-backend`
-3. Push: `docker push gcr.io/PROJECT_ID/mattailor-backend`
-4. Deploy: `gcloud run deploy --image gcr.io/PROJECT_ID/mattailor-backend`
-
-### Full Stack with Docker
-
-#### Local Development
 ```bash
-# Clone repository
-git clone https://github.com/your-repo/mattailor-ai
+# Clone the repository
+git clone <your-repo-url>
 cd mattailor-ai
 
-# Start all services
+# Build and run with Docker Compose
 docker-compose up -d
 
+# The application will be available at http://localhost:3000
+```
+
+### Development with Docker
+
+```bash
+# Run development environment
+docker-compose -f docker-compose.dev.yml up
+
+# The development server will be available at http://localhost:5173
+```
+
+## Docker Commands
+
+### Building the Image
+
+```bash
+# Build production image
+docker build -t mattailor-ai:latest .
+
+# Build development image
+docker build -f Dockerfile.dev -t mattailor-ai:dev .
+```
+
+### Running Containers
+
+```bash
+# Run production container
+docker run -d -p 3000:80 --name mattailor-app mattailor-ai:latest
+
+# Run development container
+docker run -d -p 5173:5173 -v $(pwd):/app -v /app/node_modules --name mattailor-dev mattailor-ai:dev
+```
+
+### Container Management
+
+```bash
+# View running containers
+docker ps
+
 # View logs
-docker-compose logs -f
+docker logs mattailor-app
+
+# Stop container
+docker stop mattailor-app
+
+# Remove container
+docker rm mattailor-app
+
+# Remove image
+docker rmi mattailor-ai:latest
 ```
 
-#### Production Deployment
+## Cloud Deployment Options
+
+### 1. Docker Hub + Cloud Platforms
+
 ```bash
-# Production compose file
-docker-compose -f docker-compose.prod.yml up -d
-
-# With SSL
-docker-compose -f docker-compose.prod.yml -f docker-compose.ssl.yml up -d
+# Tag and push to Docker Hub
+docker tag mattailor-ai:latest yourusername/mattailor-ai:latest
+docker push yourusername/mattailor-ai:latest
 ```
 
-## Environment Variables
+Then deploy to:
+- **AWS ECS/Fargate**: Use the pushed image
+- **Google Cloud Run**: Direct deployment from Docker Hub
+- **Azure Container Instances**: Deploy from registry
+- **DigitalOcean App Platform**: Connect to Docker Hub
 
-### Frontend (.env)
-```
-VITE_API_URL=http://localhost:8000
-VITE_ENVIRONMENT=development
-VITE_APP_NAME=MatTailor AI
-```
+### 2. Railway Deployment
 
-### Backend (.env)
-```
-ENVIRONMENT=development
-DEBUG=True
-SECRET_KEY=your-secret-key
-DATABASE_URL=postgresql://user:pass@localhost/mattailor
-REDIS_URL=redis://localhost:6379/0
-OPENAI_API_KEY=your-openai-key
-HUGGINGFACE_API_KEY=your-hf-key
-CORS_ORIGINS=["http://localhost:3000","https://your-frontend.com"]
-```
-
-## Database Setup
-
-### PostgreSQL (Production)
-```sql
--- Create database
-CREATE DATABASE mattailor;
-
--- Create user
-CREATE USER mattailor WITH PASSWORD 'secure_password';
-
--- Grant privileges
-GRANT ALL PRIVILEGES ON DATABASE mattailor TO mattailor;
-```
-
-### Migration Commands
 ```bash
-# Install alembic
-pip install alembic
+# Install Railway CLI
+npm install -g @railway/cli
 
-# Initialize migrations
-alembic init migrations
+# Login and deploy
+railway login
+railway init
+railway up
+```
 
-# Create migration
-alembic revision --autogenerate -m "Initial tables"
+### 3. Render Deployment
 
-# Apply migrations
-alembic upgrade head
+1. Connect your GitHub repository to Render
+2. Choose "Docker" as the environment
+3. Set build command: `docker build -t mattailor-ai .`
+4. Set start command: `docker run -p $PORT:80 mattailor-ai`
+
+### 4. Heroku with Container Registry
+
+```bash
+# Install Heroku CLI and login
+heroku login
+heroku container:login
+
+# Create app and deploy
+heroku create your-app-name
+heroku container:push web -a your-app-name
+heroku container:release web -a your-app-name
+```
+
+## Environment Configuration
+
+### Production Environment Variables
+
+Create `.env.production` file:
+
+```env
+NODE_ENV=production
+VITE_API_URL=https://your-api-domain.com
+VITE_MATWEBAPI_KEY=your_matwebapi_key
+VITE_MATERIALS_PROJECT_KEY=your_materials_project_key
+```
+
+### Docker Compose Environment
+
+Update `docker-compose.yml` to include environment variables:
+
+```yaml
+services:
+  mattailor-frontend:
+    # ... other config
+    environment:
+      - NODE_ENV=production
+      - VITE_API_URL=${API_URL}
+      - VITE_MATWEBAPI_KEY=${MATWEBAPI_KEY}
+      - VITE_MATERIALS_PROJECT_KEY=${MATERIALS_PROJECT_KEY}
+    env_file:
+      - .env.production
 ```
 
 ## Performance Optimization
 
-### Backend Scaling
-- Use gunicorn with multiple workers: `gunicorn -w 4 -k uvicorn.workers.UvicornWorker main:app`
-- Enable Redis caching for recommendations
-- Implement database connection pooling
-- Use CDN for static assets
+### Production Optimizations
 
-### Frontend Optimization
-- Enable PWA caching
-- Implement lazy loading for components
-- Use React.memo for expensive components
-- Bundle size optimization with tree shaking
+The production Docker image includes:
+- Multi-stage build for smaller image size
+- Nginx with gzip compression
+- Static asset caching
+- Security headers
+- Health checks
 
-## Monitoring & Health Checks
+### Scaling Considerations
 
-### Health Check Endpoints
-- Backend: `GET /health`
-- Detailed status: `GET /health/detailed`
-
-### Monitoring Setup
 ```bash
-# Add monitoring stack
-docker-compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
+# Scale with Docker Compose
+docker-compose up -d --scale mattailor-frontend=3
+
+# Use with load balancer (nginx, traefik, etc.)
 ```
 
-### Log Aggregation
-- Use structured logging (JSON format)
-- Configure log rotation
-- Set up centralized logging (ELK stack or similar)
+## Monitoring and Logs
 
-## Security Considerations
+### Container Health Monitoring
 
-### HTTPS Setup
-- Use Let's Encrypt for SSL certificates
-- Configure HSTS headers
-- Implement proper CORS policies
-
-### API Security
-- Rate limiting implemented
-- Input validation on all endpoints
-- SQL injection protection via ORM
-- Secrets management via environment variables
-
-### Frontend Security
-- Content Security Policy headers
-- XSS protection
-- Secure cookie handling
-
-## Backup & Recovery
-
-### Database Backups
 ```bash
-# Automated daily backups
-pg_dump mattailor > backup_$(date +%Y%m%d).sql
+# Check container health
+docker inspect --format='{{.State.Health.Status}}' mattailor-app
 
-# Restore from backup
-psql mattailor < backup_20231201.sql
+# View health check logs
+docker inspect --format='{{json .State.Health}}' mattailor-app
 ```
 
-### Model Backups
-- Backup trained ML models to cloud storage
-- Version control for model artifacts
-- Automated model retraining pipelines
+### Log Management
+
+```bash
+# Follow logs
+docker logs -f mattailor-app
+
+# Export logs
+docker logs mattailor-app > app.log 2>&1
+```
 
 ## Troubleshooting
 
 ### Common Issues
-1. **CORS errors**: Check CORS_ORIGINS in backend config
-2. **Database connection**: Verify DATABASE_URL format
-3. **ML model loading**: Check model file permissions
-4. **Memory issues**: Increase container memory limits
+
+1. **Port conflicts**: Change port mapping in docker-compose.yml
+2. **Build failures**: Check Docker build context and .dockerignore
+3. **Memory issues**: Increase Docker Desktop memory allocation
 
 ### Debug Commands
+
 ```bash
-# Backend logs
-docker-compose logs backend
+# Enter running container
+docker exec -it mattailor-app sh
 
-# Database connection test
-docker-compose exec backend python -c "from services.database import MaterialDatabase; print('DB OK')"
+# Debug build process
+docker build --no-cache -t mattailor-ai:debug .
 
-# Frontend build issues
-docker-compose exec frontend npm run build
+# Check container resources
+docker stats mattailor-app
 ```
 
-## Scaling Architecture
+## Security Best Practices
 
-### Microservices Migration
-- Separate recommendation engine into dedicated service
-- Extract ML prediction service
-- Implement API gateway for routing
+1. **Use specific base image versions**: `node:18-alpine` instead of `node:latest`
+2. **Run as non-root user** (implemented in production Dockerfile)
+3. **Scan images for vulnerabilities**: `docker scan mattailor-ai:latest`
+4. **Keep dependencies updated**: Regular npm audit and updates
+5. **Use secrets management** for API keys in production
 
-### Load Balancing
-- Use nginx or cloud load balancer
-- Implement sticky sessions if needed
-- Database read replicas for scaling
+## Backup and Recovery
 
-### Caching Strategy
-- Redis for API response caching
-- CDN for static assets
-- Browser caching for PWA assets
+### Data Backup
 
-## Cost Optimization
+If using persistent volumes:
 
-### Cloud Costs
-- Use spot instances for ML training
-- Implement auto-scaling groups
-- Optimize database instance sizes
-- Use cloud storage for large datasets
+```bash
+# Backup volumes
+docker run --rm -v mattailor_data:/data -v $(pwd):/backup alpine tar czf /backup/backup.tar.gz /data
 
-### Development Costs
-- Use free tiers for development
-- Implement resource auto-shutdown
-- Monitor usage with billing alerts
+# Restore volumes
+docker run --rm -v mattailor_data:/data -v $(pwd):/backup alpine tar xzf /backup/backup.tar.gz -C /
+```
+
+### Configuration Backup
+
+```bash
+# Export container configuration
+docker inspect mattailor-app > container-config.json
+```
+
+This deployment setup provides a robust, scalable foundation for running MatTailor AI in any Docker-compatible environment.

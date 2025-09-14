@@ -1,296 +1,215 @@
 # MatTailor AI - Intelligent Material Discovery Platform
 
-🔬 **Empowering engineers, designers, and manufacturers to discover, simulate, and source optimal materials for any application.**
+## Overview
 
-[![Deploy Status](https://img.shields.io/badge/deploy-ready-brightgreen)](./DEPLOYMENT.md)
-[![PWA Ready](https://img.shields.io/badge/PWA-ready-blue)](./public/manifest.json)
-[![API Status](https://img.shields.io/badge/API-FastAPI-green)](./backend)
+MatTailor AI is a comprehensive web application that empowers engineers, designers, and manufacturers to discover, simulate, tailor, and source optimal materials for specific applications without compromising on performance, cost, or sustainability.
 
-## 🌟 Features
+## Features
 
-### 🤖 AI-Powered Recommendations
-- **Natural Language Queries**: "Find a corrosion-resistant material for marine use under €30/kg"
-- **Multi-Objective Optimization**: Balance performance, cost, sustainability, and availability
-- **ML Property Prediction**: Simulate properties for novel material combinations
-- **Confidence Scoring**: Get reliability metrics for all recommendations
+- 🔧 **Material Requirements Input**: Define mechanical, environmental, budget, and application constraints
+- 🧪 **AI-Powered Recommendations**: Get optimal material suggestions with performance scoring
+- 🔬 **Property Simulation**: Simulate mechanical, electrical, and chemical properties
+- 🌱 **Sustainability Analysis**: Evaluate environmental impact and lifecycle assessment
+- 🔍 **External Material Database**: Access 150,000+ materials from MatWeb and Materials Project
+- 🧬 **Custom Material Designer**: Create new materials with periodic table integration
+- 📊 **Real-time Visualization**: Interactive charts and property comparisons
+- 🌐 **Multilingual Support**: Available in English, Swedish, German, French, and Amharic
 
-### 🧪 Advanced Simulation Engine
-- **Property Simulation**: Predict mechanical, thermal, and electrical properties
-- **Custom Material Builder**: Design new materials from base elements
-- **Trade-off Analysis**: Compare materials across multiple criteria
-- **Environmental Modeling**: Account for operating conditions and constraints
+## Quick Start
 
-### 🌍 Comprehensive Material Database
-- **Multi-Category Coverage**: Metals, polymers, ceramics, composites, semiconductors
-- **Real Supplier Data**: Local and global supplier networks with pricing
-- **Sustainability Metrics**: Lifecycle impact, recyclability, carbon footprint
-- **Manufacturing Guidance**: Process recommendations and complexity ratings
+### Using Docker (Recommended)
 
-### 📱 Progressive Web App
-- **Offline Functionality**: Work without internet connection
-- **Mobile Responsive**: Optimized for all device sizes
-- **Native App Experience**: Install on desktop and mobile devices
-- **Background Sync**: Automatic updates when connection restored
-
-## 🚀 Quick Start
-
-### Development Setup
-
-#### Backend (FastAPI)
+#### Production Deployment
 ```bash
-cd backend
-pip install -r requirements.txt
-python main.py
+# Clone and run with Docker Compose
+git clone <your-repo-url>
+cd mattailor-ai
+docker-compose up -d
+
+# Access at http://localhost:3000
 ```
 
-#### Frontend (React PWA)
+#### Development with Docker
 ```bash
+# Run development environment
+docker-compose -f docker-compose.dev.yml up
+
+# Access at http://localhost:5173
+```
+
+### Local Development
+
+```bash
+# Install dependencies
 npm install
+
+# Start development server
 npm run dev
+
+# Build for production
+npm run build
 ```
 
-Access the application at `http://localhost:5173`
+## Docker Commands
 
-### Production Deployment
-
-#### Quick Deploy Options
-- **Frontend**: Deploy to [Vercel](https://vercel.com) or [Netlify](https://netlify.com)
-- **Backend**: Deploy to [Railway](https://railway.app) or [Heroku](https://heroku.com)
-- **Full Stack**: Use Docker Compose
-
-See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed deployment instructions.
-
-## 🏗️ Architecture
-
-### Frontend Stack
-- **React 18** with TypeScript
-- **Vite** for fast development and building
-- **Tailwind CSS** for styling
-- **shadcn/ui** for component library
-- **Progressive Web App** capabilities
-
-### Backend Stack
-- **FastAPI** with Python 3.11+
-- **Pydantic** for data validation
-- **scikit-learn** for ML models
-- **pandas/numpy** for data processing
-- **uvicorn** ASGI server
-
-### Key Services
-- **Material Recommender**: Core recommendation engine
-- **NLP Processor**: Natural language query parsing
-- **Property Simulator**: ML-based property prediction
-- **RL Planner**: Reinforcement learning optimization (stub)
-
-## 📊 API Endpoints
-
-### Core Endpoints
-- `GET /health` - Health check and status
-- `POST /recommend` - Get material recommendations
-- `POST /alternatives` - Find alternative materials
-- `POST /tradeoff` - Analyze material trade-offs
-- `POST /simulate` - Simulate custom material properties
-
-### Search & Discovery
-- `GET /materials/search` - Search materials by text
-- `GET /materials/{id}` - Get material details
-- `GET /suppliers` - Get supplier information
-
-### Advanced Features
-- `POST /plan_rl` - RL-driven optimization planning
-- `POST /simulate` - Custom material simulation
-
-## 🧰 Usage Examples
-
-### Natural Language Queries
-```
-"Suggest a lightweight composite for aerospace with high strength-to-weight ratio"
-"Find eco-friendly packaging materials under $5/kg with good barrier properties"
-"What's the best metal for marine applications that won't corrode?"
-```
-
-### Structured API Calls
-```javascript
-const query = {
-  requirements: {
-    min_tensile_strength: 500,
-    max_cost_per_kg: 25,
-    min_sustainability_score: 7
-  },
-  application_domain: "automotive",
-  max_results: 10
-};
-
-const recommendations = await apiService.getMaterialRecommendations(query);
-```
-
-### Custom Material Simulation
-```javascript
-const customMaterial = {
-  composition: {
-    "Al": 90,
-    "Cu": 4,
-    "Mg": 1.5,
-    "Si": 4.5
-  },
-  conditions: {
-    temperature: 150,
-    humidity: 60
-  }
-};
-
-const properties = await apiService.simulateCustomMaterial(
-  customMaterial.composition, 
-  customMaterial.conditions
-);
-```
-
-## 🔧 Configuration
-
-### Environment Variables
-
-#### Frontend (.env)
-```
-VITE_API_URL=http://localhost:8000
-VITE_ENVIRONMENT=development
-VITE_APP_NAME=MatTailor AI
-```
-
-#### Backend (.env)
-```
-ENVIRONMENT=development
-SECRET_KEY=your-secret-key
-OPENAI_API_KEY=your-openai-key
-DATABASE_URL=postgresql://user:pass@localhost/mattailor
-CORS_ORIGINS=["http://localhost:3000"]
-```
-
-## 🧪 Testing
-
-### Backend Tests
+### Quick Commands
 ```bash
-cd backend
-pytest tests/ -v
-pytest --cov=services tests/
+# Build and run production
+npm run docker:build
+npm run docker:run
+
+# Build and run development
+npm run docker:build-dev
+npm run docker:run-dev
+
+# Using Docker Compose
+npm run compose:up      # Start services
+npm run compose:down    # Stop services
+npm run compose:dev     # Development mode
+npm run compose:logs    # View logs
 ```
 
-### Frontend Tests
+### Manual Docker Commands
 ```bash
-npm test
-npm run test:coverage
+# Build images
+docker build -t mattailor-ai:latest .
+docker build -f Dockerfile.dev -t mattailor-ai:dev .
+
+# Run containers
+docker run -d -p 3000:80 --name mattailor-app mattailor-ai:latest
+docker run -d -p 5173:5173 -v $(pwd):/app --name mattailor-dev mattailor-ai:dev
+
+# Container management
+docker ps                    # View running containers
+docker logs mattailor-app    # View logs
+docker stop mattailor-app    # Stop container
+docker rm mattailor-app      # Remove container
 ```
 
-### Integration Tests
-```bash
-docker-compose -f docker-compose.test.yml up --abort-on-container-exit
+## Cloud Deployment
+
+### Supported Platforms
+Our Docker setup supports deployment to:
+
+- **Railway**: `railway up`
+- **Render**: Connect GitHub repo with Docker environment
+- **Heroku**: `heroku container:push web && heroku container:release web`
+- **AWS ECS/Fargate**: Use Docker Hub image
+- **Google Cloud Run**: Direct deployment from registry
+- **DigitalOcean App Platform**: Connect to Docker Hub
+- **Azure Container Instances**: Deploy from registry
+
+### Environment Configuration
+
+Create `.env.production` for production deployments:
+```env
+NODE_ENV=production
+VITE_API_URL=https://your-api-domain.com
+VITE_MATWEBAPI_KEY=your_matwebapi_key
+VITE_MATERIALS_PROJECT_KEY=your_materials_project_key
 ```
 
-## 📦 Project Structure
+## Technology Stack
+
+- **Frontend**: React 19, TypeScript, Tailwind CSS
+- **UI Components**: Radix UI, shadcn/ui
+- **Data Visualization**: D3.js, Recharts
+- **Animation**: Framer Motion
+- **State Management**: React hooks with persistent KV storage
+- **Build Tool**: Vite
+- **Deployment**: Docker, Nginx
+- **External APIs**: MatWeb, Materials Project
+
+## Project Structure
 
 ```
-MatTailorAI/
-├── frontend/                 # React PWA frontend
-│   ├── src/
-│   │   ├── components/      # React components
-│   │   ├── services/        # API and PWA services
-│   │   ├── hooks/           # Custom React hooks
-│   │   └── lib/             # Utilities
-│   ├── public/              # Static assets
-│   └── package.json
-├── backend/                 # FastAPI backend
-│   ├── main.py             # Application entry point
-│   ├── models/             # Pydantic models
-│   ├── services/           # Business logic
-│   ├── config/             # Configuration
-│   └── requirements.txt
-├── docker-compose.yml       # Development stack
-├── DEPLOYMENT.md           # Deployment guide
-└── README.md              # This file
+MatTailor AI/
+├── src/
+│   ├── components/          # React components
+│   │   ├── ui/             # shadcn/ui components
+│   │   ├── layout/         # Layout components
+│   │   └── tabs/           # Tab-specific components
+│   ├── lib/                # Utilities and helpers
+│   ├── assets/             # Static assets
+│   └── App.tsx             # Main application component
+├── Dockerfile              # Production Docker image
+├── Dockerfile.dev          # Development Docker image
+├── docker-compose.yml      # Production compose
+├── docker-compose.dev.yml  # Development compose
+├── nginx.conf              # Nginx configuration
+└── DEPLOYMENT.md           # Detailed deployment guide
 ```
 
-## 🔒 Security
+## Core Functionality
 
-- **Input Validation**: All API inputs validated with Pydantic
-- **Rate Limiting**: API rate limiting implemented
-- **CORS Protection**: Configurable CORS policies
-- **Secrets Management**: Environment variable based configuration
-- **SQL Injection Protection**: ORM-based database queries
+### Material Discovery
+- Input mechanical requirements (tensile strength, density)
+- Define environmental constraints (temperature, corrosion resistance)
+- Set budget parameters and geographic preferences
+- Specify application context (aerospace, automotive, etc.)
 
-## 🌱 Sustainability Focus
+### AI Recommendations
+- ML-powered material suggestions
+- Performance scoring across multiple criteria
+- Trade-off analysis and visualization
+- Alternative material recommendations
 
-MatTailor AI prioritizes environmental responsibility:
+### Custom Material Design
+- Interactive periodic table for element selection
+- Real-time composition normalization
+- Property prediction for custom alloys
+- Visual composition charts and analysis
 
-- **Lifecycle Assessment**: Full environmental impact scoring
-- **Circular Economy**: Emphasis on recyclable and reusable materials
-- **Local Sourcing**: Regional supplier recommendations to reduce transport
-- **Green Alternatives**: Always suggest sustainable material options
-- **Carbon Footprint**: Transparent CO₂ impact measurements
+### Property Simulation
+- Mechanical property calculations
+- Electrical conductivity modeling
+- Chemical compatibility analysis
+- Temperature and pressure sensitivity
 
-## 🤝 Contributing
-
-We welcome contributions! Please see our contribution guidelines:
+## Contributing
 
 1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Commit changes: `git commit -m 'Add amazing feature'`
-4. Push to branch: `git push origin feature/amazing-feature`
-5. Open a Pull Request
+2. Create a feature branch: `git checkout -b feature/new-feature`
+3. Commit changes: `git commit -am 'Add new feature'`
+4. Push to branch: `git push origin feature/new-feature`
+5. Submit a pull request
 
-### Development Guidelines
-- Follow TypeScript best practices
-- Write comprehensive tests
-- Update documentation
-- Follow conventional commit messages
+## Development Guidelines
 
-## 📄 License
+- Use TypeScript for type safety
+- Follow React best practices with hooks
+- Maintain responsive design principles
+- Write meaningful commit messages
+- Test Docker builds before submitting PRs
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## Performance Optimization
 
-## 🆘 Support
+The production Docker image includes:
+- Multi-stage builds for minimal image size
+- Nginx with gzip compression and caching
+- Static asset optimization
+- Security headers implementation
+- Health check endpoints
 
-- **Documentation**: [docs.mattailor.ai](https://docs.mattailor.ai)
-- **Issues**: [GitHub Issues](https://github.com/mattailor-ai/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/mattailor-ai/discussions)
-- **Email**: support@mattailor.ai
+## Security Features
 
-## 🗺️ Roadmap
+- Content Security Policy headers
+- XSS protection
+- Secure API key management
+- Non-root container execution
+- Regular dependency updates
 
-### Phase 1 ✅ (Current)
-- [x] Core recommendation engine
-- [x] Natural language processing
-- [x] Progressive Web App
-- [x] Basic material database
-- [x] Property simulation
+## Support
 
-### Phase 2 🔄 (In Progress)
-- [ ] Real material database integration
-- [ ] Advanced ML models
-- [ ] User authentication
-- [ ] Material performance tracking
-- [ ] API rate limiting and caching
+For issues and questions:
+1. Check the [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed setup instructions
+2. Review Docker logs: `docker logs mattailor-app`
+3. Inspect container health: `docker inspect --format='{{.State.Health.Status}}' mattailor-app`
 
-### Phase 3 📋 (Planned)
-- [ ] Reinforcement learning optimization
-- [ ] Real-time supplier pricing
-- [ ] Mobile native apps
-- [ ] Enterprise features
-- [ ] Multi-language support
+## License
 
-## 🏆 Awards & Recognition
-
-- 🥇 **Best AI Application** - TechCrunch Disrupt 2024
-- 🌟 **Innovation Award** - Materials Research Society
-- 🏅 **Sustainability Champion** - Green Tech Awards
-
-## 📈 Performance
-
-- **Response Time**: < 200ms average API response
-- **Uptime**: 99.9% availability
-- **Cache Hit Rate**: 85% for common queries
-- **Mobile Performance**: 95+ Lighthouse score
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 ---
 
-**Built with ❤️ by the MatTailor AI Team**
-
-*Revolutionizing materials discovery through artificial intelligence*
+**MatTailor AI** - Revolutionizing material discovery through intelligent AI-powered solutions.

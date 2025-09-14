@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  mattailor-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - VITE_HMR_PORT=5173
+    stdin_open: true
+    tty: true
+    networks:
+      - mattailor-dev-network
+    command: npm run dev -- --host 0.0.0.0
+
+networks:
+  mattailor-dev-network:
+    driver: bridge

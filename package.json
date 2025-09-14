@@ -9,7 +9,17 @@
         "build": "tsc -b --noCheck && vite build",
         "lint": "eslint .",
         "optimize": "vite optimize",
-        "preview": "vite preview"
+        "preview": "vite preview",
+        "docker:build": "docker build -t mattailor-ai:latest .",
+        "docker:build-dev": "docker build -f Dockerfile.dev -t mattailor-ai:dev .",
+        "docker:run": "docker run -d -p 3000:80 --name mattailor-app mattailor-ai:latest",
+        "docker:run-dev": "docker run -d -p 5173:5173 -v $(pwd):/app -v /app/node_modules --name mattailor-dev mattailor-ai:dev",
+        "docker:stop": "docker stop mattailor-app || true",
+        "docker:clean": "docker stop mattailor-app || true && docker rm mattailor-app || true",
+        "compose:up": "docker-compose up -d",
+        "compose:down": "docker-compose down",
+        "compose:dev": "docker-compose -f docker-compose.dev.yml up",
+        "compose:logs": "docker-compose logs -f"
     },
     "dependencies": {
         "@github/spark": "^0.39.0",
