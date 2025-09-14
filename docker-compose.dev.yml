@@ -1,23 +1,62 @@
 version: '3.8'
 
 services:
-  mattailor-dev:
+  # Development Frontend Service
+  frontend-dev:
     build:
       context: .
       dockerfile: Dockerfile.dev
     ports:
       - "5173:5173"
+    environment:
+      - NODE_ENV=development
+      - VITE_API_URL=http://localhost:8000
+      - VITE_MATWEB_API_URL=http://localhost:8000/api/matweb
+      - VITE_MP_API_URL=http://localhost:8000/api/materials-project
     volumes:
       - .:/app
       - /app/node_modules
-    environment:
-      - NODE_ENV=development
-      - VITE_HMR_PORT=5173
-    stdin_open: true
-    tty: true
+    restart: unless-stopped
     networks:
       - mattailor-dev-network
-    command: npm run dev -- --host 0.0.0.0
+    command: npm run dev
+
+  # Development Backend Service
+  backend-dev:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=development
+      - DATABASE_URL=sqlite:///./dev_mattailor.db
+      - MATWEB_API_KEY=${MATWEBAPI_KEY}
+      - MATERIALS_PROJECT_API_KEY=${MP_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - RELOAD=true
+    volumes:
+      - ./backend:/app
+      - backend-dev-data:/app/data
+    restart: unless-stopped
+    networks:
+      - mattailor-dev-network
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Development Redis
+  redis-dev:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis-dev-data:/data
+    restart: unless-stopped
+    networks:
+      - mattailor-dev-network
+
+volumes:
+  backend-dev-data:
+  redis-dev-data:
 
 networks:
   mattailor-dev-network:

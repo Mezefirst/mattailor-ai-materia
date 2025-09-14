@@ -1,240 +1,347 @@
-# MatTailor AI - Deployment Guide
+# MatTailor AI Deployment Guide
 
-This guide covers various deployment options for the MatTailor AI application using Docker.
+This guide covers deploying MatTailor AI across different environments using Docker containers.
 
-## Quick Start with Docker
+## Quick Start
 
-### Production Deployment
+### Prerequisites
+- Docker and Docker Compose installed
+- Node.js 18+ (for development)
+- Git (for CI/CD)
 
-```bash
-# Clone the repository
-git clone <your-repo-url>
-cd mattailor-ai
+### Environment Setup
 
-# Build and run with Docker Compose
-docker-compose up -d
+1. **Copy environment template:**
+   ```bash
+   cp .env.example .env
+   ```
 
-# The application will be available at http://localhost:3000
-```
+2. **Configure API keys in your environment file:**
+   ```bash
+   MATWEBAPI_KEY=your_matweb_api_key_here
+   MP_API_KEY=your_materials_project_api_key_here
+   OPENAI_API_KEY=your_openai_api_key_here
+   ```
 
-### Development with Docker
+3. **Make deployment script executable:**
+   ```bash
+   chmod +x scripts/deploy.sh
+   ```
 
-```bash
-# Run development environment
-docker-compose -f docker-compose.dev.yml up
+## Deployment Environments
 
-# The development server will be available at http://localhost:5173
-```
+### Development Environment
 
-## Docker Commands
-
-### Building the Image
-
-```bash
-# Build production image
-docker build -t mattailor-ai:latest .
-
-# Build development image
-docker build -f Dockerfile.dev -t mattailor-ai:dev .
-```
-
-### Running Containers
+For local development with hot reloading:
 
 ```bash
-# Run production container
-docker run -d -p 3000:80 --name mattailor-app mattailor-ai:latest
+# Using the deployment script
+./scripts/deploy.sh development --build
 
-# Run development container
-docker run -d -p 5173:5173 -v $(pwd):/app -v /app/node_modules --name mattailor-dev mattailor-ai:dev
+# Or manually with Docker Compose
+docker-compose -f docker-compose.dev.yml up --build
 ```
 
-### Container Management
+**Access URLs:**
+- Frontend: http://localhost:5173
+- Backend: http://localhost:8000
+- API Docs: http://localhost:8000/docs
+
+### Staging Environment
+
+For testing in a production-like environment:
 
 ```bash
-# View running containers
-docker ps
+# Set up staging environment file
+cp .env.example .env.staging
 
-# View logs
-docker logs mattailor-app
+# Deploy to staging
+./scripts/deploy.sh staging --build
 
-# Stop container
-docker stop mattailor-app
-
-# Remove container
-docker rm mattailor-app
-
-# Remove image
-docker rmi mattailor-ai:latest
+# Or manually
+export IMAGE_TAG=latest
+docker-compose -f deploy/docker-compose.staging.yml up -d
 ```
 
-## Cloud Deployment Options
+**Access URLs:**
+- Frontend: https://staging.mattailor.ai
+- Backend: https://api-staging.mattailor.ai
 
-### 1. Docker Hub + Cloud Platforms
+### Production Environment
+
+For production deployment with monitoring and load balancing:
 
 ```bash
-# Tag and push to Docker Hub
-docker tag mattailor-ai:latest yourusername/mattailor-ai:latest
-docker push yourusername/mattailor-ai:latest
+# Set up production environment file
+cp .env.example .env.production
+
+# Deploy to production (with safety confirmation)
+./scripts/deploy.sh production
+
+# Or manually
+export IMAGE_TAG=v1.0.0
+export DOCKER_USERNAME=your_username
+docker-compose -f deploy/docker-compose.production.yml up -d
 ```
 
-Then deploy to:
-- **AWS ECS/Fargate**: Use the pushed image
-- **Google Cloud Run**: Direct deployment from Docker Hub
-- **Azure Container Instances**: Deploy from registry
-- **DigitalOcean App Platform**: Connect to Docker Hub
+**Access URLs:**
+- Frontend: https://mattailor.ai
+- Backend: https://api.mattailor.ai
+- Monitoring: https://monitoring.mattailor.ai
+- Dashboards: https://dashboards.mattailor.ai
 
-### 2. Railway Deployment
+## CI/CD Pipeline
 
-```bash
-# Install Railway CLI
-npm install -g @railway/cli
+### GitHub Actions Setup
 
-# Login and deploy
-railway login
-railway init
-railway up
-```
+1. **Configure repository secrets:**
+   ```
+   DOCKER_USERNAME=your_docker_hub_username
+   DOCKER_PASSWORD=your_docker_hub_password
+   MATWEBAPI_KEY=your_matweb_api_key
+   MP_API_KEY=your_materials_project_api_key
+   OPENAI_API_KEY=your_openai_api_key
+   POSTGRES_PASSWORD=secure_database_password
+   ACME_EMAIL=your_email_for_ssl_certificates
+   GRAFANA_ADMIN_PASSWORD=grafana_admin_password
+   ```
 
-### 3. Render Deployment
+2. **Automated deployments:**
+   - Push to `develop` branch → Deploy to staging
+   - Push to `main` branch → Deploy to production
+   - Pull requests → Run tests and build checks
 
-1. Connect your GitHub repository to Render
-2. Choose "Docker" as the environment
-3. Set build command: `docker build -t mattailor-ai .`
-4. Set start command: `docker run -p $PORT:80 mattailor-ai`
+### Manual Deployment Steps
 
-### 4. Heroku with Container Registry
+1. **Build and push Docker images:**
+   ```bash
+   # Build images
+   docker build -t your_username/mattailor-frontend:latest .
+   docker build -t your_username/mattailor-backend:latest backend/
 
-```bash
-# Install Heroku CLI and login
-heroku login
-heroku container:login
+   # Push to registry
+   docker push your_username/mattailor-frontend:latest
+   docker push your_username/mattailor-backend:latest
+   ```
 
-# Create app and deploy
-heroku create your-app-name
-heroku container:push web -a your-app-name
-heroku container:release web -a your-app-name
-```
+2. **Deploy to target environment:**
+   ```bash
+   # Set environment variables
+   export DOCKER_USERNAME=your_username
+   export IMAGE_TAG=latest
+
+   # Deploy
+   docker-compose -f deploy/docker-compose.production.yml up -d
+   ```
 
 ## Environment Configuration
 
-### Production Environment Variables
+### Required Environment Variables
 
-Create `.env.production` file:
+| Variable | Development | Staging | Production | Description |
+|----------|-------------|---------|------------|-------------|
+| `NODE_ENV` | development | staging | production | Application environment |
+| `MATWEBAPI_KEY` | Optional | Required | Required | MatWeb API access key |
+| `MP_API_KEY` | Optional | Required | Required | Materials Project API key |
+| `OPENAI_API_KEY` | Optional | Required | Required | OpenAI API key for AI features |
+| `DATABASE_URL` | SQLite | PostgreSQL | PostgreSQL | Database connection string |
+| `POSTGRES_PASSWORD` | - | Required | Required | Database password |
+| `DOCKER_USERNAME` | - | Required | Required | Docker Hub username |
+| `ACME_EMAIL` | - | Required | Required | Email for SSL certificates |
 
-```env
-NODE_ENV=production
-VITE_API_URL=https://your-api-domain.com
-VITE_MATWEBAPI_KEY=your_matwebapi_key
-VITE_MATERIALS_PROJECT_KEY=your_materials_project_key
-```
+### API Keys Setup
 
-### Docker Compose Environment
+#### MatWeb API Key
+1. Register at [MatWeb](https://www.matweb.com/api/)
+2. Subscribe to appropriate plan
+3. Add key to environment variables
 
-Update `docker-compose.yml` to include environment variables:
+#### Materials Project API Key
+1. Register at [Materials Project](https://materialsproject.org/)
+2. Generate API key from user profile
+3. Add key to environment variables
 
-```yaml
-services:
-  mattailor-frontend:
-    # ... other config
-    environment:
-      - NODE_ENV=production
-      - VITE_API_URL=${API_URL}
-      - VITE_MATWEBAPI_KEY=${MATWEBAPI_KEY}
-      - VITE_MATERIALS_PROJECT_KEY=${MATERIALS_PROJECT_KEY}
-    env_file:
-      - .env.production
-```
+#### OpenAI API Key
+1. Create account at [OpenAI](https://platform.openai.com/)
+2. Generate API key
+3. Add key to environment variables
 
-## Performance Optimization
+## Monitoring and Logging
 
-### Production Optimizations
+### Production Monitoring Stack
 
-The production Docker image includes:
-- Multi-stage build for smaller image size
-- Nginx with gzip compression
-- Static asset caching
-- Security headers
-- Health checks
+The production environment includes:
+- **Traefik**: Load balancer and SSL termination
+- **Prometheus**: Metrics collection
+- **Grafana**: Visualization dashboards
+- **PostgreSQL**: Primary database
+- **Redis**: Caching layer
 
-### Scaling Considerations
+### Health Checks
 
-```bash
-# Scale with Docker Compose
-docker-compose up -d --scale mattailor-frontend=3
-
-# Use with load balancer (nginx, traefik, etc.)
-```
-
-## Monitoring and Logs
-
-### Container Health Monitoring
-
-```bash
-# Check container health
-docker inspect --format='{{.State.Health.Status}}' mattailor-app
-
-# View health check logs
-docker inspect --format='{{json .State.Health}}' mattailor-app
-```
+All services include health check endpoints:
+- Frontend: `GET /health`
+- Backend: `GET /health`
+- Database: Built-in PostgreSQL health checks
+- Redis: Built-in Redis health checks
 
 ### Log Management
 
+View logs for specific services:
 ```bash
-# Follow logs
-docker logs -f mattailor-app
+# All services
+docker-compose logs -f
 
-# Export logs
-docker logs mattailor-app > app.log 2>&1
+# Specific service
+docker-compose logs -f frontend-prod
+
+# Follow logs during deployment
+./scripts/deploy.sh production --logs
 ```
+
+## Scaling and Performance
+
+### Horizontal Scaling
+
+Production services are configured with multiple replicas:
+- Frontend: 2 replicas
+- Backend: 3 replicas
+- Database: Single instance with backup recommendations
+
+### Resource Limits
+
+Each service has defined resource limits:
+- Frontend: 512MB memory limit
+- Backend: 1GB memory limit
+- Database: 2GB memory limit
+- Redis: 512MB memory limit
+
+### Performance Optimization
+
+1. **Frontend optimizations:**
+   - Nginx gzip compression
+   - Static asset caching
+   - CDN integration ready
+
+2. **Backend optimizations:**
+   - Redis caching layer
+   - Database connection pooling
+   - API response caching
+
+3. **Database optimizations:**
+   - Indexed queries
+   - Connection pooling
+   - Read replicas (recommended)
+
+## Security Considerations
+
+### Production Security Features
+
+1. **SSL/TLS encryption** via Let's Encrypt
+2. **Security headers** in Nginx configuration
+3. **Container security** with non-root users
+4. **Network isolation** via Docker networks
+5. **Environment variable protection**
+
+### Security Best Practices
+
+1. **Never commit secrets** to version control
+2. **Use strong passwords** for all services
+3. **Regular security updates** for base images
+4. **Network segmentation** between environments
+5. **Regular backup procedures**
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **Port conflicts**: Change port mapping in docker-compose.yml
-2. **Build failures**: Check Docker build context and .dockerignore
-3. **Memory issues**: Increase Docker Desktop memory allocation
+1. **Build failures:**
+   ```bash
+   # Clean build cache
+   docker system prune -a
+   
+   # Rebuild without cache
+   docker-compose build --no-cache
+   ```
 
-### Debug Commands
+2. **Port conflicts:**
+   ```bash
+   # Check port usage
+   docker ps
+   netstat -tulpn
+   
+   # Stop conflicting services
+   docker-compose down
+   ```
 
-```bash
-# Enter running container
-docker exec -it mattailor-app sh
+3. **Database connection issues:**
+   ```bash
+   # Check database logs
+   docker-compose logs postgres-prod
+   
+   # Test connection
+   docker-compose exec postgres-prod psql -U mattailor_prod -d mattailor_prod
+   ```
 
-# Debug build process
-docker build --no-cache -t mattailor-ai:debug .
+4. **SSL certificate issues:**
+   ```bash
+   # Check Traefik logs
+   docker-compose logs traefik-prod
+   
+   # Verify certificate
+   openssl s_client -connect mattailor.ai:443
+   ```
 
-# Check container resources
-docker stats mattailor-app
-```
+### Recovery Procedures
 
-## Security Best Practices
+1. **Database backup and restore:**
+   ```bash
+   # Backup
+   docker-compose exec postgres-prod pg_dump -U mattailor_prod mattailor_prod > backup.sql
+   
+   # Restore
+   docker-compose exec -T postgres-prod psql -U mattailor_prod mattailor_prod < backup.sql
+   ```
 
-1. **Use specific base image versions**: `node:18-alpine` instead of `node:latest`
-2. **Run as non-root user** (implemented in production Dockerfile)
-3. **Scan images for vulnerabilities**: `docker scan mattailor-ai:latest`
-4. **Keep dependencies updated**: Regular npm audit and updates
-5. **Use secrets management** for API keys in production
+2. **Container recovery:**
+   ```bash
+   # Restart specific service
+   docker-compose restart backend-prod
+   
+   # Full environment restart
+   docker-compose down && docker-compose up -d
+   ```
 
-## Backup and Recovery
+## Support and Maintenance
 
-### Data Backup
+### Regular Maintenance Tasks
 
-If using persistent volumes:
+1. **Weekly:**
+   - Monitor resource usage
+   - Check application logs
+   - Verify backup procedures
 
-```bash
-# Backup volumes
-docker run --rm -v mattailor_data:/data -v $(pwd):/backup alpine tar czf /backup/backup.tar.gz /data
+2. **Monthly:**
+   - Update base Docker images
+   - Review security patches
+   - Analyze performance metrics
 
-# Restore volumes
-docker run --rm -v mattailor_data:/data -v $(pwd):/backup alpine tar xzf /backup/backup.tar.gz -C /
-```
+3. **Quarterly:**
+   - Capacity planning review
+   - Security audit
+   - Disaster recovery testing
 
-### Configuration Backup
+### Getting Help
 
-```bash
-# Export container configuration
-docker inspect mattailor-app > container-config.json
-```
+- Check logs first: `docker-compose logs [service-name]`
+- Review this deployment guide
+- Check GitHub Issues for known problems
+- Contact the development team
 
-This deployment setup provides a robust, scalable foundation for running MatTailor AI in any Docker-compatible environment.
+## Additional Resources
+
+- [Docker Documentation](https://docs.docker.com/)
+- [Docker Compose Reference](https://docs.docker.com/compose/)
+- [Traefik Documentation](https://doc.traefik.io/traefik/)
+- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
+- [Redis Documentation](https://redis.io/documentation)

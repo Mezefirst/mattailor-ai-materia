@@ -1,0 +1,102 @@
+version: '3.8'
+
+services:
+  # Staging Frontend
+  frontend-staging:
+    image: ${DOCKER_USERNAME}/mattailor-frontend:${IMAGE_TAG:-latest}
+    ports:
+      - "3001:80"
+    environment:
+      - NODE_ENV=staging
+      - VITE_API_URL=https://api-staging.mattailor.ai
+    volumes:
+      - ./nginx.staging.conf:/etc/nginx/nginx.conf:ro
+    restart: unless-stopped
+    networks:
+      - mattailor-staging
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend-staging.rule=Host(`staging.mattailor.ai`)"
+      - "traefik.http.routers.frontend-staging.tls=true"
+      - "traefik.http.routers.frontend-staging.tls.certresolver=letsencrypt"
+
+  # Staging Backend
+  backend-staging:
+    image: ${DOCKER_USERNAME}/mattailor-backend:${IMAGE_TAG:-latest}
+    ports:
+      - "8001:8000"
+    environment:
+      - ENVIRONMENT=staging
+      - DATABASE_URL=postgresql://mattailor_staging:${POSTGRES_PASSWORD}@postgres-staging:5432/mattailor_staging
+      - REDIS_URL=redis://redis-staging:6379
+      - MATWEB_API_KEY=${MATWEBAPI_KEY}
+      - MATERIALS_PROJECT_API_KEY=${MP_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - CORS_ORIGINS=https://staging.mattailor.ai
+    depends_on:
+      - postgres-staging
+      - redis-staging
+    restart: unless-stopped
+    networks:
+      - mattailor-staging
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.backend-staging.rule=Host(`api-staging.mattailor.ai`)"
+      - "traefik.http.routers.backend-staging.tls=true"
+      - "traefik.http.routers.backend-staging.tls.certresolver=letsencrypt"
+
+  # Staging Database
+  postgres-staging:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=mattailor_staging
+      - POSTGRES_USER=mattailor_staging
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - postgres-staging-data:/var/lib/postgresql/data
+      - ../init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    restart: unless-stopped
+    networks:
+      - mattailor-staging
+
+  # Staging Redis
+  redis-staging:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-staging-data:/data
+    restart: unless-stopped
+    networks:
+      - mattailor-staging
+
+  # Reverse Proxy
+  traefik:
+    image: traefik:v3.0
+    command:
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik-letsencrypt:/letsencrypt
+    restart: unless-stopped
+    networks:
+      - mattailor-staging
+
+volumes:
+  postgres-staging-data:
+  redis-staging-data:
+  traefik-letsencrypt:
+
+networks:
+  mattailor-staging:
+    driver: bridge

@@ -1,0 +1,198 @@
+version: '3.8'
+
+services:
+  # Production Frontend
+  frontend-prod:
+    image: ${DOCKER_USERNAME}/mattailor-frontend:${IMAGE_TAG:-latest}
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    environment:
+      - NODE_ENV=production
+      - VITE_API_URL=https://api.mattailor.ai
+    volumes:
+      - ./nginx.production.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - mattailor-prod
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend-prod.rule=Host(`mattailor.ai`) || Host(`www.mattailor.ai`)"
+      - "traefik.http.routers.frontend-prod.tls=true"
+      - "traefik.http.routers.frontend-prod.tls.certresolver=letsencrypt"
+      - "traefik.http.middlewares.www-redirect.redirectregex.regex=^https://www.mattailor.ai/(.*)"
+      - "traefik.http.middlewares.www-redirect.redirectregex.replacement=https://mattailor.ai/$${1}"
+      - "traefik.http.routers.frontend-prod.middlewares=www-redirect"
+
+  # Production Backend
+  backend-prod:
+    image: ${DOCKER_USERNAME}/mattailor-backend:${IMAGE_TAG:-latest}
+    deploy:
+      replicas: 3
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+    environment:
+      - ENVIRONMENT=production
+      - DATABASE_URL=postgresql://mattailor_prod:${POSTGRES_PASSWORD}@postgres-prod:5432/mattailor_prod
+      - REDIS_URL=redis://redis-prod:6379
+      - MATWEB_API_KEY=${MATWEBAPI_KEY}
+      - MATERIALS_PROJECT_API_KEY=${MP_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - CORS_ORIGINS=https://mattailor.ai,https://www.mattailor.ai
+      - LOG_LEVEL=warn
+    depends_on:
+      - postgres-prod
+      - redis-prod
+    networks:
+      - mattailor-prod
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.backend-prod.rule=Host(`api.mattailor.ai`)"
+      - "traefik.http.routers.backend-prod.tls=true"
+      - "traefik.http.routers.backend-prod.tls.certresolver=letsencrypt"
+
+  # Production Database with Master-Slave setup
+  postgres-prod:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=mattailor_prod
+      - POSTGRES_USER=mattailor_prod
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_INITDB_ARGS="--auth-host=scram-sha-256"
+    volumes:
+      - postgres-prod-data:/var/lib/postgresql/data
+      - ../init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./postgresql.conf:/etc/postgresql/postgresql.conf:ro
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+    networks:
+      - mattailor-prod
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mattailor_prod"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Production Redis Cluster
+  redis-prod:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-prod-data:/data
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    networks:
+      - mattailor-prod
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # Production Load Balancer
+  traefik-prod:
+    image: traefik:v3.0
+    command:
+      - "--api.dashboard=false"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--log.level=WARN"
+      - "--accesslog=true"
+      - "--metrics.prometheus=true"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik-prod-letsencrypt:/letsencrypt
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+    networks:
+      - mattailor-prod
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # Monitoring - Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=90d'
+      - '--web.enable-lifecycle'
+    networks:
+      - mattailor-prod
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prometheus.rule=Host(`monitoring.mattailor.ai`)"
+      - "traefik.http.routers.prometheus.tls=true"
+      - "traefik.http.routers.prometheus.tls.certresolver=letsencrypt"
+
+  # Monitoring - Grafana
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks:
+      - mattailor-prod
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`dashboards.mattailor.ai`)"
+      - "traefik.http.routers.grafana.tls=true"
+      - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
+
+volumes:
+  postgres-prod-data:
+  redis-prod-data:
+  traefik-prod-letsencrypt:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  mattailor-prod:
+    driver: bridge

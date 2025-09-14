@@ -1,8 +1,6 @@
 #!/bin/bash
 
 # MatTailor AI Deployment Script
-# This script handles deployment to various environments
-
 set -e
 
 # Colors for output
@@ -12,210 +10,300 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Default values
-ENVIRONMENT="production"
-IMAGE_TAG="latest"
-REGISTRY="ghcr.io"
-NAMESPACE="mattailor"
+# Configuration
+ENVIRONMENTS=("development" "staging" "production")
+DEFAULT_ENVIRONMENT="development"
 
-# Parse command line arguments
-while [[ $# -gt 0 ]]; do
-  case $1 in
-    -e|--environment)
-      ENVIRONMENT="$2"
-      shift 2
-      ;;
-    -t|--tag)
-      IMAGE_TAG="$2"
-      shift 2
-      ;;
-    -r|--registry)
-      REGISTRY="$2"
-      shift 2
-      ;;
-    -n|--namespace)
-      NAMESPACE="$2"
-      shift 2
-      ;;
-    -h|--help)
-      echo "Usage: $0 [OPTIONS]"
-      echo "Options:"
-      echo "  -e, --environment  Environment to deploy to (staging|production) [default: production]"
-      echo "  -t, --tag         Docker image tag [default: latest]"
-      echo "  -r, --registry    Docker registry [default: ghcr.io]"
-      echo "  -n, --namespace   Kubernetes namespace [default: mattailor]"
-      echo "  -h, --help        Show this help message"
-      exit 0
-      ;;
-    *)
-      echo "Unknown option $1"
-      exit 1
-      ;;
-  esac
-done
+# Functions
+print_usage() {
+    echo "Usage: $0 [ENVIRONMENT] [OPTIONS]"
+    echo ""
+    echo "ENVIRONMENTS:"
+    echo "  development  - Local development environment"
+    echo "  staging      - Staging environment"
+    echo "  production   - Production environment"
+    echo ""
+    echo "OPTIONS:"
+    echo "  --build      - Force rebuild of Docker images"
+    echo "  --clean      - Clean up existing containers and volumes"
+    echo "  --logs       - Show logs after deployment"
+    echo "  --help       - Show this help message"
+    echo ""
+    echo "Examples:"
+    echo "  $0 development --build"
+    echo "  $0 staging --clean --logs"
+    echo "  $0 production"
+}
 
-echo -e "${BLUE}🚀 Starting deployment to ${ENVIRONMENT}${NC}"
-echo -e "${BLUE}📦 Image: ${REGISTRY}/${GITHUB_REPOSITORY:-mattailor/mattailor-ai}:${IMAGE_TAG}${NC}"
+log_info() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
 
-# Function to check if required tools are installed
+log_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
+log_warning() {
+    echo -e "${YELLOW}[WARNING]${NC} $1"
+}
+
+log_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
 check_requirements() {
-    echo -e "${YELLOW}🔍 Checking requirements...${NC}"
+    log_info "Checking requirements..."
     
+    # Check if Docker is installed
     if ! command -v docker &> /dev/null; then
-        echo -e "${RED}❌ Docker is not installed${NC}"
+        log_error "Docker is not installed. Please install Docker first."
         exit 1
     fi
     
-    if ! command -v kubectl &> /dev/null; then
-        echo -e "${YELLOW}⚠️  kubectl not found, Kubernetes deployment will be skipped${NC}"
-    fi
-    
-    echo -e "${GREEN}✅ Requirements check passed${NC}"
-}
-
-# Function to deploy using Docker Compose
-deploy_docker_compose() {
-    echo -e "${YELLOW}🐳 Deploying with Docker Compose...${NC}"
-    
-    # Set environment variables
-    export MATTAILOR_IMAGE="${REGISTRY}/${GITHUB_REPOSITORY:-mattailor/mattailor-ai}:${IMAGE_TAG}"
-    export ENVIRONMENT="${ENVIRONMENT}"
-    
-    # Choose the right compose file
-    COMPOSE_FILE="docker-compose.yml"
-    if [[ "${ENVIRONMENT}" == "staging" ]]; then
-        COMPOSE_FILE="docker-compose.staging.yml"
-    fi
-    
-    # Pull latest images
-    docker-compose -f "${COMPOSE_FILE}" pull
-    
-    # Deploy
-    docker-compose -f "${COMPOSE_FILE}" up -d
-    
-    # Wait for services to be ready
-    echo -e "${YELLOW}⏳ Waiting for services to be ready...${NC}"
-    sleep 10
-    
-    # Health check
-    if curl -f http://localhost:3000/health &> /dev/null; then
-        echo -e "${GREEN}✅ Application is healthy${NC}"
-    else
-        echo -e "${RED}❌ Health check failed${NC}"
-        docker-compose -f "${COMPOSE_FILE}" logs
-        exit 1
-    fi
-}
-
-# Function to deploy to Kubernetes
-deploy_kubernetes() {
-    echo -e "${YELLOW}☸️  Deploying to Kubernetes...${NC}"
-    
-    # Check if kubectl is configured
-    if ! kubectl cluster-info &> /dev/null; then
-        echo -e "${RED}❌ kubectl is not configured or cluster is not accessible${NC}"
+    # Check if Docker Compose is installed
+    if ! command -v docker-compose &> /dev/null; then
+        log_error "Docker Compose is not installed. Please install Docker Compose first."
         exit 1
     fi
     
-    # Create namespace if it doesn't exist
-    kubectl create namespace "${NAMESPACE}" --dry-run=client -o yaml | kubectl apply -f -
+    # Check if Docker is running
+    if ! docker info &> /dev/null; then
+        log_error "Docker is not running. Please start Docker first."
+        exit 1
+    fi
     
-    # Apply Kubernetes manifests
-    envsubst < k8s/deployment.yaml | kubectl apply -f -
-    envsubst < k8s/service.yaml | kubectl apply -f -
-    envsubst < k8s/ingress.yaml | kubectl apply -f -
-    
-    # Wait for rollout to complete
-    kubectl rollout status deployment/mattailor-frontend -n "${NAMESPACE}" --timeout=300s
-    
-    echo -e "${GREEN}✅ Kubernetes deployment completed${NC}"
+    log_success "All requirements satisfied"
 }
 
-# Function to deploy to cloud platforms
-deploy_cloud() {
-    case "${ENVIRONMENT}" in
-        "vercel")
-            echo -e "${YELLOW}🌐 Deploying to Vercel...${NC}"
-            npx vercel --prod
+load_environment() {
+    local env=$1
+    local env_file=".env"
+    
+    case $env in
+        "development")
+            env_file=".env.example"
             ;;
-        "netlify")
-            echo -e "${YELLOW}🌐 Deploying to Netlify...${NC}"
-            npx netlify deploy --prod --dir=dist
+        "staging")
+            env_file=".env.staging"
             ;;
-        "railway")
-            echo -e "${YELLOW}🚂 Deploying to Railway...${NC}"
-            railway deploy
-            ;;
-        *)
-            echo -e "${YELLOW}ℹ️  No specific cloud deployment configured for ${ENVIRONMENT}${NC}"
+        "production")
+            env_file=".env.production"
             ;;
     esac
-}
-
-# Function to run post-deployment tests
-run_tests() {
-    echo -e "${YELLOW}🧪 Running post-deployment tests...${NC}"
     
-    # Basic health check
-    if curl -f http://localhost:3000/ &> /dev/null; then
-        echo -e "${GREEN}✅ Basic health check passed${NC}"
+    if [[ -f $env_file ]]; then
+        log_info "Loading environment from $env_file"
+        export $(cat $env_file | grep -v '^#' | xargs)
     else
-        echo -e "${RED}❌ Basic health check failed${NC}"
-        return 1
+        log_warning "Environment file $env_file not found"
+        if [[ $env != "development" ]]; then
+            log_error "Environment file is required for $env environment"
+            exit 1
+        fi
     fi
-    
-    # Additional tests can be added here
-    echo -e "${GREEN}✅ All tests passed${NC}"
 }
 
-# Function to send notifications
-send_notifications() {
-    echo -e "${YELLOW}📢 Sending deployment notifications...${NC}"
+build_images() {
+    log_info "Building Docker images..."
     
-    # Slack notification (if webhook is configured)
-    if [[ -n "${SLACK_WEBHOOK_URL}" ]]; then
-        curl -X POST -H 'Content-type: application/json' \
-            --data "{\"text\":\"🚀 MatTailor AI deployed to ${ENVIRONMENT} with tag ${IMAGE_TAG}\"}" \
-            "${SLACK_WEBHOOK_URL}"
+    # Build frontend
+    log_info "Building frontend image..."
+    docker build -t mattailor-frontend:latest .
+    
+    # Build backend (if exists)
+    if [[ -f "backend/Dockerfile" ]]; then
+        log_info "Building backend image..."
+        docker build -t mattailor-backend:latest backend/
     fi
     
-    # Discord notification (if webhook is configured)
-    if [[ -n "${DISCORD_WEBHOOK_URL}" ]]; then
-        curl -H "Content-Type: application/json" \
-            -d "{\"content\":\"🚀 MatTailor AI deployed to ${ENVIRONMENT} with tag ${IMAGE_TAG}\"}" \
-            "${DISCORD_WEBHOOK_URL}"
-    fi
-    
-    echo -e "${GREEN}✅ Notifications sent${NC}"
+    log_success "Docker images built successfully"
 }
 
-# Main deployment flow
-main() {
-    check_requirements
+deploy_development() {
+    log_info "Deploying to development environment..."
     
-    case "${ENVIRONMENT}" in
-        "staging"|"production")
-            if command -v kubectl &> /dev/null && [[ -n "${KUBERNETES_CLUSTER}" ]]; then
-                deploy_kubernetes
-            else
-                deploy_docker_compose
-            fi
+    local compose_file="docker-compose.dev.yml"
+    
+    if [[ "$BUILD" == "true" ]]; then
+        build_images
+    fi
+    
+    if [[ "$CLEAN" == "true" ]]; then
+        log_info "Cleaning up existing containers and volumes..."
+        docker-compose -f $compose_file down -v --remove-orphans
+    fi
+    
+    log_info "Starting development services..."
+    docker-compose -f $compose_file up -d
+    
+    log_success "Development environment deployed successfully"
+    log_info "Frontend: http://localhost:5173"
+    log_info "Backend: http://localhost:8000"
+}
+
+deploy_staging() {
+    log_info "Deploying to staging environment..."
+    
+    local compose_file="deploy/docker-compose.staging.yml"
+    
+    if [[ ! -f $compose_file ]]; then
+        log_error "Staging compose file not found: $compose_file"
+        exit 1
+    fi
+    
+    if [[ "$BUILD" == "true" ]]; then
+        build_images
+    fi
+    
+    if [[ "$CLEAN" == "true" ]]; then
+        log_info "Cleaning up existing containers and volumes..."
+        docker-compose -f $compose_file down -v --remove-orphans
+    fi
+    
+    log_info "Starting staging services..."
+    docker-compose -f $compose_file up -d
+    
+    log_success "Staging environment deployed successfully"
+    log_info "Frontend: https://staging.mattailor.ai"
+    log_info "Backend: https://api-staging.mattailor.ai"
+}
+
+deploy_production() {
+    log_info "Deploying to production environment..."
+    
+    local compose_file="deploy/docker-compose.production.yml"
+    
+    if [[ ! -f $compose_file ]]; then
+        log_error "Production compose file not found: $compose_file"
+        exit 1
+    fi
+    
+    # Production safety checks
+    log_warning "Deploying to PRODUCTION environment!"
+    read -p "Are you sure you want to continue? (y/N): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        log_info "Deployment cancelled"
+        exit 0
+    fi
+    
+    # Check required environment variables
+    required_vars=("POSTGRES_PASSWORD" "DOCKER_USERNAME" "MATWEBAPI_KEY" "MP_API_KEY" "OPENAI_API_KEY")
+    for var in "${required_vars[@]}"; do
+        if [[ -z "${!var}" ]]; then
+            log_error "Required environment variable $var is not set"
+            exit 1
+        fi
+    done
+    
+    if [[ "$BUILD" == "true" ]]; then
+        build_images
+    fi
+    
+    if [[ "$CLEAN" == "true" ]]; then
+        log_warning "Cleaning production environment..."
+        read -p "This will delete all production data. Continue? (y/N): " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            docker-compose -f $compose_file down -v --remove-orphans
+        else
+            log_info "Clean cancelled"
+        fi
+    fi
+    
+    log_info "Starting production services..."
+    docker-compose -f $compose_file up -d
+    
+    log_success "Production environment deployed successfully"
+    log_info "Frontend: https://mattailor.ai"
+    log_info "Backend: https://api.mattailor.ai"
+    log_info "Monitoring: https://monitoring.mattailor.ai"
+    log_info "Dashboards: https://dashboards.mattailor.ai"
+}
+
+show_logs() {
+    local env=$1
+    local compose_file
+    
+    case $env in
+        "development")
+            compose_file="docker-compose.dev.yml"
             ;;
-        "vercel"|"netlify"|"railway")
-            deploy_cloud
+        "staging")
+            compose_file="deploy/docker-compose.staging.yml"
+            ;;
+        "production")
+            compose_file="deploy/docker-compose.production.yml"
+            ;;
+    esac
+    
+    log_info "Showing logs for $env environment..."
+    docker-compose -f $compose_file logs -f
+}
+
+# Parse arguments
+ENVIRONMENT=$DEFAULT_ENVIRONMENT
+BUILD="false"
+CLEAN="false"
+SHOW_LOGS="false"
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        development|staging|production)
+            ENVIRONMENT=$1
+            shift
+            ;;
+        --build)
+            BUILD="true"
+            shift
+            ;;
+        --clean)
+            CLEAN="true"
+            shift
+            ;;
+        --logs)
+            SHOW_LOGS="true"
+            shift
+            ;;
+        --help)
+            print_usage
+            exit 0
             ;;
         *)
-            echo -e "${RED}❌ Unknown environment: ${ENVIRONMENT}${NC}"
-            echo "Supported environments: staging, production, vercel, netlify, railway"
+            log_error "Unknown option: $1"
+            print_usage
             exit 1
             ;;
     esac
-    
-    run_tests
-    send_notifications
-    
-    echo -e "${GREEN}🎉 Deployment completed successfully!${NC}"
-}
+done
 
-# Run main function
-main "$@"
+# Validate environment
+if [[ ! " ${ENVIRONMENTS[@]} " =~ " ${ENVIRONMENT} " ]]; then
+    log_error "Invalid environment: $ENVIRONMENT"
+    print_usage
+    exit 1
+fi
+
+# Main deployment flow
+log_info "Starting deployment for $ENVIRONMENT environment..."
+
+check_requirements
+load_environment $ENVIRONMENT
+
+case $ENVIRONMENT in
+    "development")
+        deploy_development
+        ;;
+    "staging")
+        deploy_staging
+        ;;
+    "production")
+        deploy_production
+        ;;
+esac
+
+if [[ "$SHOW_LOGS" == "true" ]]; then
+    show_logs $ENVIRONMENT
+fi
+
+log_success "Deployment completed successfully!"
