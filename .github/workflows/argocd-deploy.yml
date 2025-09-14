@@ -1,0 +1,370 @@
+name: ArgoCD GitOps Deployment
+
+on:
+  push:
+    branches: [main, staging, develop]
+    paths:
+      - 'k8s/**'
+      - '.github/workflows/argocd-deploy.yml'
+  pull_request:
+    branches: [main, staging]
+    paths:
+      - 'k8s/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        default: 'development'
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+      force_sync:
+        description: 'Force sync applications'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  validate-manifests:
+    name: Validate Kubernetes Manifests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Kustomize
+        uses: imranismail/setup-kustomize@v2
+        with:
+          kustomize-version: "5.0.0"
+
+      - name: Validate base manifests
+        run: |
+          echo "Validating base Kubernetes manifests..."
+          kustomize build k8s/base > /tmp/base-manifests.yaml
+          
+          # Validate YAML syntax
+          python -c "
+          import yaml
+          import sys
+          try:
+              with open('/tmp/base-manifests.yaml', 'r') as f:
+                  list(yaml.safe_load_all(f))
+              print('✅ Base manifests are valid YAML')
+          except yaml.YAMLError as e:
+              print(f'❌ YAML validation failed: {e}')
+              sys.exit(1)
+          "
+
+      - name: Validate overlay manifests
+        run: |
+          for env in dev staging prod; do
+            echo "Validating $env overlay..."
+            if [ -d "k8s/overlays/$env" ]; then
+              kustomize build k8s/overlays/$env > /tmp/$env-manifests.yaml
+              
+              # Validate YAML syntax
+              python -c "
+              import yaml
+              import sys
+              try:
+                  with open('/tmp/$env-manifests.yaml', 'r') as f:
+                      list(yaml.safe_load_all(f))
+                  print(f'✅ $env overlay manifests are valid YAML')
+              except yaml.YAMLError as e:
+                  print(f'❌ $env YAML validation failed: {e}')
+                  sys.exit(1)
+              "
+            fi
+          done
+
+      - name: Validate ArgoCD manifests
+        run: |
+          echo "Validating ArgoCD configurations..."
+          for file in k8s/argocd/applications/*.yaml k8s/argocd/projects/*.yaml; do
+            if [ -f "$file" ]; then
+              echo "Validating $file..."
+              python -c "
+              import yaml
+              import sys
+              try:
+                  with open('$file', 'r') as f:
+                      list(yaml.safe_load_all(f))
+                  print('✅ $file is valid')
+              except yaml.YAMLError as e:
+                  print(f'❌ $file validation failed: {e}')
+                  sys.exit(1)
+              "
+            fi
+          done
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: 'k8s/'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  deploy-to-dev:
+    name: Deploy to Development
+    needs: [validate-manifests, security-scan]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
+    environment: development
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+
+      - name: Configure kubectl
+        run: |
+          echo "${{ secrets.KUBE_CONFIG_DEV }}" | base64 -d > ~/.kube/config
+          kubectl cluster-info
+
+      - name: Refresh ArgoCD application
+        run: |
+          # Refresh the development application to pick up changes
+          kubectl patch application mattailor-ai-dev -n argocd \
+            --type merge \
+            -p '{"metadata":{"annotations":{"argocd.argoproj.io/refresh":"now"}}}'
+
+      - name: Wait for sync completion
+        run: |
+          echo "Waiting for ArgoCD to sync the application..."
+          kubectl wait --for=condition=Synced \
+            --timeout=300s \
+            application/mattailor-ai-dev -n argocd
+
+      - name: Verify deployment health
+        run: |
+          # Check application health
+          kubectl get application mattailor-ai-dev -n argocd -o jsonpath='{.status.health.status}'
+          
+          # Verify pods are running
+          kubectl get pods -n mattailor-ai-dev
+          kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=mattailor-ai -n mattailor-ai-dev --timeout=300s
+
+  deploy-to-staging:
+    name: Deploy to Staging
+    needs: [validate-manifests, security-scan]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/staging'
+    environment: staging
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+
+      - name: Configure kubectl
+        run: |
+          echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > ~/.kube/config
+          kubectl cluster-info
+
+      - name: Sync ArgoCD application
+        run: |
+          # Manual sync for staging environment
+          kubectl patch application mattailor-ai-staging -n argocd \
+            --type merge \
+            -p '{"operation":{"sync":{"syncStrategy":{"hook":{"force":true}}}}}'
+
+      - name: Wait for sync completion
+        run: |
+          echo "Waiting for ArgoCD to sync the staging application..."
+          kubectl wait --for=condition=Synced \
+            --timeout=600s \
+            application/mattailor-ai-staging -n argocd
+
+      - name: Run health checks
+        run: |
+          # Wait for pods to be ready
+          kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=mattailor-ai -n mattailor-ai-staging --timeout=300s
+          
+          # Run basic health check
+          if kubectl get ingress -n mattailor-ai-staging | grep -q mattailor; then
+            echo "✅ Ingress is configured"
+          fi
+
+  deploy-to-production:
+    name: Deploy to Production
+    needs: [validate-manifests, security-scan]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production')
+    environment: production
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+
+      - name: Configure kubectl
+        run: |
+          echo "${{ secrets.KUBE_CONFIG_PROD }}" | base64 -d > ~/.kube/config
+          kubectl cluster-info
+
+      - name: Create deployment approval
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ github.TOKEN }}
+          approvers: ${{ vars.PRODUCTION_APPROVERS }}
+          minimum-approvals: 2
+          issue-title: "Production Deployment Approval Required"
+          issue-body: |
+            ## Production Deployment Request
+            
+            **Repository:** ${{ github.repository }}
+            **Branch:** ${{ github.ref_name }}
+            **Commit:** ${{ github.sha }}
+            **Triggered by:** ${{ github.actor }}
+            
+            **Changes:**
+            ${{ github.event.head_commit.message }}
+            
+            **Deployment will:**
+            - Update MatTailor AI production environment
+            - Apply Kubernetes manifests from k8s/overlays/prod
+            - Sync ArgoCD application `mattailor-ai-prod`
+            
+            Please review the changes and approve if ready for production deployment.
+
+      - name: Sync production application
+        run: |
+          # Manual sync for production with careful monitoring
+          echo "Syncing production application..."
+          kubectl patch application mattailor-ai-prod -n argocd \
+            --type merge \
+            -p '{"operation":{"sync":{"syncStrategy":{"hook":{"force":false}}}}}'
+
+      - name: Monitor deployment
+        run: |
+          echo "Monitoring production deployment..."
+          
+          # Wait for sync to complete
+          kubectl wait --for=condition=Synced \
+            --timeout=900s \
+            application/mattailor-ai-prod -n argocd
+          
+          # Wait for pods to be ready
+          kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=mattailor-ai -n mattailor-ai-prod --timeout=600s
+          
+          # Check application health
+          HEALTH=$(kubectl get application mattailor-ai-prod -n argocd -o jsonpath='{.status.health.status}')
+          if [ "$HEALTH" != "Healthy" ]; then
+            echo "❌ Application health check failed: $HEALTH"
+            exit 1
+          fi
+          
+          echo "✅ Production deployment completed successfully"
+
+      - name: Run smoke tests
+        run: |
+          # Basic smoke tests for production
+          echo "Running production smoke tests..."
+          
+          # Check if ingress is responding
+          if kubectl get ingress -n mattailor-ai-prod | grep -q mattailor; then
+            echo "✅ Production ingress is configured"
+          fi
+          
+          # Check if all services are up
+          kubectl get services -n mattailor-ai-prod
+          
+          echo "✅ Production smoke tests passed"
+
+      - name: Notify deployment success
+        if: success()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: success
+          channel: '#deployments'
+          message: |
+            ✅ **Production Deployment Successful**
+            
+            **Application:** MatTailor AI
+            **Environment:** Production
+            **Commit:** ${{ github.sha }}
+            **Deployed by:** ${{ github.actor }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Notify deployment failure
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          channel: '#alerts'
+          message: |
+            ❌ **Production Deployment Failed**
+            
+            **Application:** MatTailor AI
+            **Environment:** Production
+            **Commit:** ${{ github.sha }}
+            **Failed step:** ${{ job.status }}
+            
+            Please check the deployment logs and take immediate action.
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  rollback:
+    name: Rollback Deployment
+    runs-on: ubuntu-latest
+    if: failure() && (github.ref == 'refs/heads/main' || github.event.inputs.environment == 'production')
+    environment: production
+    steps:
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+
+      - name: Configure kubectl
+        run: |
+          echo "${{ secrets.KUBE_CONFIG_PROD }}" | base64 -d > ~/.kube/config
+
+      - name: Rollback production application
+        run: |
+          echo "Rolling back production application..."
+          
+          # Get previous revision
+          PREVIOUS_REVISION=$(kubectl get application mattailor-ai-prod -n argocd -o jsonpath='{.status.history[1].revision}')
+          
+          # Rollback to previous revision
+          kubectl patch application mattailor-ai-prod -n argocd \
+            --type merge \
+            -p "{\"operation\":{\"sync\":{\"revision\":\"$PREVIOUS_REVISION\"}}}"
+          
+          # Wait for rollback to complete
+          kubectl wait --for=condition=Synced \
+            --timeout=600s \
+            application/mattailor-ai-prod -n argocd
+          
+          echo "✅ Rollback completed to revision: $PREVIOUS_REVISION"

@@ -1,106 +1,323 @@
-name: Docker Build & Test
+name: Build and Push Docker Images
 
 on:
   push:
+    branches: [main, staging, develop]
     paths:
-      - 'Dockerfile*'
-      - 'docker-compose*.yml'
-      - 'nginx.conf'
       - 'src/**'
-      - 'public/**'
+      - 'backend/**'
+      - 'Dockerfile*'
       - 'package*.json'
+      - '.github/workflows/docker-build.yml'
   pull_request:
+    branches: [main, staging]
     paths:
-      - 'Dockerfile*'
-      - 'docker-compose*.yml'
-      - 'nginx.conf'
       - 'src/**'
-      - 'public/**'
+      - 'backend/**'
+      - 'Dockerfile*'
       - 'package*.json'
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  docker-test:
-    name: Docker Build Test
+  build-frontend:
+    name: Build Frontend Image
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.image.outputs.image }}
+      digest: ${{ steps.build.outputs.digest }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
+      - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker image
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=develop,enable=${{ github.ref == 'refs/heads/develop' }}
+            type=raw,value=staging,enable=${{ github.ref == 'refs/heads/staging' }}
+
+      - name: Build and push frontend image
+        id: build
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./Dockerfile
-          push: false
-          tags: mattailor-ai:test
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Test Docker image
-        run: |
-          # Start the container
-          docker run -d --name mattailor-test -p 8080:80 mattailor-ai:test
-          
-          # Wait for container to be ready
-          sleep 10
-          
-          # Test if the application is running
-          curl -f http://localhost:8080/ || exit 1
-          
-          # Test health check
-          docker exec mattailor-test curl -f http://localhost/ || exit 1
-          
-          # Stop and remove container
-          docker stop mattailor-test
-          docker rm mattailor-test
-
-  docker-compose-test:
-    name: Docker Compose Test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Test Docker Compose
-        run: |
-          # Start services
-          docker-compose up -d
-          
-          # Wait for services to be ready
-          sleep 15
-          
-          # Test if the application is running
-          curl -f http://localhost:3000/ || exit 1
-          
-          # Check container health
-          docker-compose ps
-          
-          # Stop services
-          docker-compose down
-
-  multi-arch-build:
-    name: Multi-Architecture Build Test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build multi-arch image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile
+          file: ./Dockerfile.frontend
           platforms: linux/amd64,linux/arm64
-          push: false
-          tags: mattailor-ai:multi-arch-test
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+
+      - name: Generate image reference
+        id: image
+        run: |
+          echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend:${{ github.ref_name }}-${{ github.sha }}" >> $GITHUB_OUTPUT
+
+  build-backend:
+    name: Build Backend Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.image.outputs.image }}
+      digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-backend
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=develop,enable=${{ github.ref == 'refs/heads/develop' }}
+            type=raw,value=staging,enable=${{ github.ref == 'refs/heads/staging' }}
+
+      - name: Build and push backend image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.backend
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+
+      - name: Generate image reference
+        id: image
+        run: |
+          echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-backend:${{ github.ref_name }}-${{ github.sha }}" >> $GITHUB_OUTPUT
+
+  security-scan:
+    name: Security Scan Images
+    needs: [build-frontend, build-backend]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        image: 
+          - ${{ needs.build-frontend.outputs.image }}
+          - ${{ needs.build-backend.outputs.image }}
+    steps:
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ matrix.image }}
+          format: 'sarif'
+          output: 'trivy-results-${{ matrix.image }}.sarif'
+
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results-${{ matrix.image }}.sarif'
+
+  update-manifests:
+    name: Update Kubernetes Manifests
+    needs: [build-frontend, build-backend, security-scan]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Kustomize
+        uses: imranismail/setup-kustomize@v2
+        with:
+          kustomize-version: "5.0.0"
+
+      - name: Update image tags
+        run: |
+          # Determine environment based on branch
+          case "${{ github.ref_name }}" in
+            "main")
+              ENV="prod"
+              FRONTEND_TAG="${{ github.ref_name }}-${{ github.sha }}"
+              BACKEND_TAG="${{ github.ref_name }}-${{ github.sha }}"
+              ;;
+            "staging")
+              ENV="staging"
+              FRONTEND_TAG="${{ github.ref_name }}-${{ github.sha }}"
+              BACKEND_TAG="${{ github.ref_name }}-${{ github.sha }}"
+              ;;
+            "develop")
+              ENV="dev"
+              FRONTEND_TAG="${{ github.ref_name }}-${{ github.sha }}"
+              BACKEND_TAG="${{ github.ref_name }}-${{ github.sha }}"
+              ;;
+            *)
+              echo "Unknown branch, skipping manifest update"
+              exit 0
+              ;;
+          esac
+          
+          echo "Updating manifests for environment: $ENV"
+          
+          # Update frontend image
+          cd k8s/overlays/$ENV
+          kustomize edit set image mattailor-ai-frontend=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend:$FRONTEND_TAG
+          
+          # Update backend image
+          kustomize edit set image mattailor-ai-backend=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-backend:$BACKEND_TAG
+          
+          echo "Updated images:"
+          echo "Frontend: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend:$FRONTEND_TAG"
+          echo "Backend: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-backend:$BACKEND_TAG"
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git add k8s/overlays/*/kustomization.yaml
+          
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          
+          git commit -m "Update container images for ${{ github.ref_name }}
+          
+          Frontend: ${{ needs.build-frontend.outputs.image }}
+          Backend: ${{ needs.build-backend.outputs.image }}
+          
+          Triggered by: ${{ github.sha }}"
+          
+          git push
+
+  trigger-argocd-sync:
+    name: Trigger ArgoCD Sync
+    needs: [update-manifests]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && needs.update-manifests.result == 'success'
+    steps:
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+
+      - name: Trigger ArgoCD sync
+        run: |
+          # Determine environment and kubectl config
+          case "${{ github.ref_name }}" in
+            "main")
+              ENV="prod"
+              KUBECONFIG_SECRET="${{ secrets.KUBE_CONFIG_PROD }}"
+              APP_NAME="mattailor-ai-prod"
+              ;;
+            "staging")
+              ENV="staging"
+              KUBECONFIG_SECRET="${{ secrets.KUBE_CONFIG_STAGING }}"
+              APP_NAME="mattailor-ai-staging"
+              ;;
+            "develop")
+              ENV="dev"
+              KUBECONFIG_SECRET="${{ secrets.KUBE_CONFIG_DEV }}"
+              APP_NAME="mattailor-ai-dev"
+              ;;
+            *)
+              echo "Unknown branch, skipping ArgoCD sync"
+              exit 0
+              ;;
+          esac
+          
+          # Configure kubectl
+          echo "$KUBECONFIG_SECRET" | base64 -d > ~/.kube/config
+          
+          # Refresh ArgoCD application to pick up manifest changes
+          kubectl patch application $APP_NAME -n argocd \
+            --type merge \
+            -p '{"metadata":{"annotations":{"argocd.argoproj.io/refresh":"now"}}}'
+          
+          echo "✅ Triggered ArgoCD sync for $APP_NAME in $ENV environment"
+
+  notify-deployment:
+    name: Notify Deployment Status
+    needs: [build-frontend, build-backend, security-scan, update-manifests, trigger-argocd-sync]
+    runs-on: ubuntu-latest
+    if: always() && github.event_name == 'push'
+    steps:
+      - name: Notify success
+        if: needs.trigger-argocd-sync.result == 'success'
+        uses: 8398a7/action-slack@v3
+        with:
+          status: success
+          channel: '#deployments'
+          message: |
+            ✅ **Container Images Built and Deployed**
+            
+            **Branch:** ${{ github.ref_name }}
+            **Commit:** ${{ github.sha }}
+            **Frontend Image:** ${{ needs.build-frontend.outputs.image }}
+            **Backend Image:** ${{ needs.build-backend.outputs.image }}
+            
+            ArgoCD will automatically sync the changes.
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Notify failure
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          channel: '#alerts'
+          message: |
+            ❌ **Container Build Failed**
+            
+            **Branch:** ${{ github.ref_name }}
+            **Commit:** ${{ github.sha }}
+            **Failed Job:** ${{ job.status }}
+            
+            Please check the build logs and fix the issues.
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

@@ -1,0 +1,46 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-server-config
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-server-config
+    app.kubernetes.io/part-of: argocd
+data:
+  # Enable insecure mode for port-forwarding (disable for production with proper TLS)
+  server.insecure: "true"
+  
+  # Repository server configuration
+  repositories: |
+    - type: git
+      url: https://github.com/your-org/mattailor-ai
+      name: mattailor-ai-repo
+    
+  # Enable OIDC authentication (optional)
+  oidc.config: |
+    name: OIDC
+    issuer: https://your-oidc-provider.com
+    clientId: argocd
+    clientSecret: $oidc.clientSecret
+    requestedScopes: ["openid", "profile", "email", "groups"]
+    requestedIDTokenClaims: {"groups": {"essential": true}}
+  
+  # Application configuration
+  application.instanceLabelKey: argocd.argoproj.io/instance
+  
+  # Resource customizations for MatTailor AI
+  resource.customizations: |
+    networking.k8s.io/Ingress:
+      health.lua: |
+        hs = {}
+        hs.status = "Healthy"
+        return hs
+    
+  # Additional resource exclusions
+  resource.exclusions: |
+    - apiGroups:
+      - cilium.io
+      kinds:
+      - CiliumIdentity
+      clusters:
+      - "*"

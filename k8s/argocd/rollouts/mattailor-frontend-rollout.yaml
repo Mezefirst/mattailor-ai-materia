@@ -1,0 +1,164 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: mattailor-frontend
+  namespace: mattailor-ai-prod
+  labels:
+    app.kubernetes.io/name: mattailor-frontend
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/part-of: mattailor-ai
+spec:
+  replicas: 3
+  strategy:
+    canary:
+      # Canary deployment strategy for frontend
+      maxSurge: "25%"
+      maxUnavailable: 0
+      
+      # Analysis configuration
+      analysis:
+        templates:
+          - templateName: success-rate
+        startingStep: 2
+        args:
+          - name: service-name
+            value: mattailor-frontend
+      
+      # Canary steps
+      steps:
+      - setWeight: 10
+      - pause: {duration: 2m}
+      - setWeight: 20
+      - pause: {duration: 2m}
+      - analysis:
+          templates:
+          - templateName: success-rate
+          args:
+          - name: service-name
+            value: mattailor-frontend
+      - setWeight: 40
+      - pause: {duration: 5m}
+      - setWeight: 60
+      - pause: {duration: 5m}
+      - setWeight: 80
+      - pause: {duration: 5m}
+      
+      # Traffic routing
+      trafficRouting:
+        nginx:
+          stableIngress: mattailor-frontend-stable
+          annotationPrefix: nginx.ingress.kubernetes.io
+          additionalIngressAnnotations:
+            canary-by-header: X-Canary
+            canary-by-header-value: "true"
+      
+      # Anti-affinity for canary pods
+      antiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution: {}
+        preferredDuringSchedulingIgnoredDuringExecution:
+          weight: 1
+          podAffinityTerm:
+            labelSelector:
+              matchLabels:
+                app: mattailor-frontend
+            topologyKey: kubernetes.io/hostname
+  
+  selector:
+    matchLabels:
+      app: mattailor-frontend
+  
+  template:
+    metadata:
+      labels:
+        app: mattailor-frontend
+        app.kubernetes.io/name: mattailor-frontend
+        app.kubernetes.io/component: frontend
+        app.kubernetes.io/part-of: mattailor-ai
+    spec:
+      serviceAccountName: mattailor-frontend
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+      containers:
+      - name: frontend
+        image: mattailor-ai-frontend:v1.0.0
+        imagePullPolicy: Always
+        ports:
+        - name: http
+          containerPort: 3000
+          protocol: TCP
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: API_BASE_URL
+          value: "https://api.mattailor.ai"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: cache
+          mountPath: /app/.next/cache
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: cache
+        emptyDir: {}
+  
+  revisionHistoryLimit: 5
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: success-rate
+  namespace: mattailor-ai-prod
+spec:
+  args:
+  - name: service-name
+  metrics:
+  - name: success-rate
+    interval: 1m
+    count: 5
+    successCondition: result[0] >= 0.95  # 95% success rate
+    provider:
+      prometheus:
+        address: http://prometheus.monitoring.svc.cluster.local:9090
+        query: |
+          sum(rate(nginx_ingress_controller_requests{service="{{args.service-name}}",status!~"5.."}[2m])) /
+          sum(rate(nginx_ingress_controller_requests{service="{{args.service-name}}"}[2m]))
+  - name: avg-response-time
+    interval: 1m
+    count: 5
+    successCondition: result[0] <= 0.5  # 500ms max response time
+    provider:
+      prometheus:
+        address: http://prometheus.monitoring.svc.cluster.local:9090
+        query: |
+          histogram_quantile(0.95, 
+            sum(rate(nginx_ingress_controller_request_duration_seconds_bucket{service="{{args.service-name}}"}[2m])) by (le)
+          )

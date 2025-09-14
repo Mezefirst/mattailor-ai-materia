@@ -1,0 +1,37 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: mattailor-ai-apps
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: mattailor-ai-apps
+    pattern: app-of-apps
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: mattailor-ai
+  source:
+    repoURL: https://github.com/your-org/mattailor-ai
+    targetRevision: main
+    path: k8s/argocd/applications
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false  # argocd namespace already exists
+      - PrunePropagationPolicy=foreground
+      - ApplyOutOfSyncOnly=true
+  revisionHistoryLimit: 5
+  info:
+    - name: Description
+      value: "App of Apps pattern for managing all MatTailor AI applications"
+    - name: Pattern
+      value: "GitOps App of Apps"
+    - name: Documentation
+      value: "https://argo-cd.readthedocs.io/en/stable/operator-manual/cluster-bootstrapping/"
