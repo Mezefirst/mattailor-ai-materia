@@ -86,18 +86,57 @@ Traditional material selection is:
 - **Processing Guidance**: Heat treatment schedules and manufacturing process recommendations
 - **Composition History**: Track and compare multiple optimization iterations with detailed analysis
 
-### 🌟 Breakthrough High-Entropy Alloy Laboratory
-**Functionality**: Revolutionary multi-element alloy design with configurational entropy maximization for next-generation materials
-**Purpose**: Enable discovery of materials with unprecedented property combinations through advanced entropy engineering
+### 🏠 House Utility Materials Database
+**Functionality**: Comprehensive database of residential and commercial building materials including plumbing, electrical, insulation, roofing, flooring, structural, and HVAC materials
+**Purpose**: Expand material discovery beyond industrial applications to support architects, contractors, and homeowners in selecting optimal building materials
 **Success Criteria**: 
-- Generate scientifically valid HEA compositions with >60% configurational entropy
-- AI optimization produces breakthrough materials with 2-5x property improvements
-- Integration with established HEA systems and novel concept generation
+- Complete coverage of major house utility categories with real-world properties and supplier information
+- Cost-effective material recommendations for residential construction projects
+- Integration with building codes and sustainability requirements
 
-#### High-Entropy Alloy Features
-- **Configurational Entropy Analysis**: Real-time calculation and optimization of mixing entropy (S_conf = -R * Σ(xi * ln(xi)))
-- **Established HEA Systems**: Presets for proven alloys (Cantor CoCrFeMnNi, AlCoCrFeNi, refractory MoNbTaW)
-- **Element Pool Selection**: Targeted element groups (3d-transition, refractory, noble metals, rare earth)
+#### House Utility Material Categories
+- **Plumbing Materials**: PVC pipes, copper tubing, PEX systems, fittings, and valve materials
+- **Electrical Materials**: Building wire, conduit systems, electrical components, and safety equipment
+- **Insulation Materials**: Fiberglass batts, spray foam, rigid foam, reflective barriers, and vapor barriers  
+- **Roofing Materials**: Asphalt shingles, metal roofing, tile systems, and weather barriers
+- **Flooring Materials**: Luxury vinyl plank, ceramic tile, hardwood, laminate, and carpet systems
+- **Structural Materials**: Concrete, steel framing, engineered lumber, and masonry materials
+- **HVAC Materials**: Ductwork, refrigeration lines, heat exchangers, and air filtration systems
+
+#### Construction-Specific Features
+- **Building Code Compliance**: Automatic filtering based on local building codes and regulations
+- **Climate Considerations**: Material recommendations based on geographic location and weather patterns  
+- **Cost Optimization**: Budget-conscious selections with lifecycle cost analysis
+- **Installation Complexity**: Difficulty ratings and professional installation requirements
+- **Sustainability Metrics**: Environmental impact ratings and green building certification compatibility
+
+### 📦 Material Selection Integration
+**Functionality**: Seamless material transfer between Overview and specialized analysis tabs for comprehensive material evaluation
+**Purpose**: Enable users to efficiently analyze selected materials across multiple dimensions without losing context or re-entering data
+**Success Criteria**: One-click material transfer to analysis tabs with 100% data preservation and contextual quick-action buttons
+
+#### Cross-Tab Material Flow
+- **Overview → New Material**: Load existing material for composition enhancement and element optimization
+- **Overview → AI Recommendation**: Use selected material as comparison baseline for AI-generated alternatives  
+- **Overview → ML Enhanced**: Apply machine learning optimization to existing material compositions
+- **Overview → Properties**: Simulate mechanical, thermal, electrical, and chemical properties with pressure/temperature sensitivity
+- **Overview → Sustainability**: Perform lifecycle analysis and supply chain assessment on selected materials
+- **Quick Action Buttons**: Direct navigation shortcuts maintaining material selection context across all tabs
+
+### 🎯 Advanced Material Optimization
+**Functionality**: Real-time property prediction with temperature and pressure sensitivity analysis for enhanced material performance evaluation
+**Purpose**: Provide engineers with comprehensive understanding of how materials behave under varying environmental conditions
+**Success Criteria**: 
+- Real-time property updates as composition changes with sub-second response times
+- Accurate temperature coefficient predictions for thermal cycling applications  
+- Pressure sensitivity analysis for high-stress and deep-sea applications
+
+#### Environmental Response Modeling
+- **Temperature Sensitivity**: Property variations across operational temperature ranges (-200°C to 2000°C)
+- **Pressure Analysis**: Mechanical property changes under hydrostatic and applied pressures (0.1 to 1000 MPa)
+- **Combined Effects**: Simultaneous temperature-pressure modeling for extreme environment applications
+- **Failure Prediction**: Critical threshold identification for material limits and safety factors
+- **Interactive Visualization**: Real-time charts showing property landscapes across environmental parameter space
 - **Property-Driven Design**: Optimization for strength, thermal resistance, electrical properties, corrosion resistance
 - **Phase Prediction**: VEC-based phase stability analysis (BCC vs FCC prediction)
 - **Processing Optimization**: Heat treatment and manufacturing guidance for complex HEAs

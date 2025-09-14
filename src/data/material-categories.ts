@@ -572,6 +572,314 @@ export const MATERIAL_CATEGORIES: MaterialCategory[] = [
         examples: ['Electrical Steel', 'Permalloy', 'Mu-metal', 'Sendust']
       }
     ]
+  },
+
+  // === HOUSE UTILITY MATERIALS ===
+  
+  {
+    id: 'plumbing-materials',
+    name: 'Plumbing Materials',
+    description: 'Materials used for water supply, drainage, and plumbing systems in residential and commercial buildings',
+    baseElements: ['Cu', 'C', 'H', 'Cl'],
+    typicalComposition: [
+      { symbol: 'C', name: 'Carbon', percentage: 45, atomicNumber: 6, role: 'base' },
+      { symbol: 'H', name: 'Hydrogen', percentage: 8, atomicNumber: 1, role: 'base' },
+      { symbol: 'Cl', name: 'Chlorine', percentage: 47, atomicNumber: 17, role: 'alloying' }
+    ],
+    properties: {
+      strength: 'medium',
+      conductivity: 'insulator',
+      corrosionResistance: 'excellent',
+      temperature: 'medium'
+    },
+    applications: ['water supply', 'drainage', 'gas lines', 'irrigation'],
+    subcategories: [
+      {
+        id: 'plastic-pipes',
+        name: 'Plastic Pipes',
+        composition: [
+          { symbol: 'C', name: 'Carbon', percentage: 45, atomicNumber: 6, role: 'base' },
+          { symbol: 'H', name: 'Hydrogen', percentage: 8, atomicNumber: 1, role: 'base' },
+          { symbol: 'Cl', name: 'Chlorine', percentage: 47, atomicNumber: 17, role: 'alloying' }
+        ],
+        specificProperties: { chemicalResistance: 'excellent', costEffective: 'yes' },
+        examples: ['PVC', 'PEX', 'CPVC', 'ABS']
+      },
+      {
+        id: 'metal-pipes',
+        name: 'Metal Pipes',
+        composition: [
+          { symbol: 'Cu', name: 'Copper', percentage: 100, atomicNumber: 29, role: 'base' }
+        ],
+        specificProperties: { antimicrobial: 'yes', longevity: 'excellent' },
+        examples: ['Copper Type K', 'Copper Type L', 'Galvanized Steel', 'Stainless Steel']
+      }
+    ]
+  },
+
+  {
+    id: 'electrical-materials',
+    name: 'Electrical Materials',
+    description: 'Materials used for electrical wiring, conduits, and electrical components in buildings',
+    baseElements: ['Cu', 'Al', 'C', 'H'],
+    typicalComposition: [
+      { symbol: 'Cu', name: 'Copper', percentage: 70, atomicNumber: 29, role: 'base' },
+      { symbol: 'C', name: 'Carbon', percentage: 20, atomicNumber: 6, role: 'alloying' },
+      { symbol: 'H', name: 'Hydrogen', percentage: 10, atomicNumber: 1, role: 'alloying' }
+    ],
+    properties: {
+      strength: 'medium',
+      conductivity: 'conductor',
+      corrosionResistance: 'good',
+      temperature: 'medium'
+    },
+    applications: ['building wiring', 'electrical panels', 'conduit systems', 'grounding'],
+    subcategories: [
+      {
+        id: 'building-wire',
+        name: 'Building Wire',
+        composition: [
+          { symbol: 'Cu', name: 'Copper Core', percentage: 70, atomicNumber: 29, role: 'base' },
+          { symbol: 'C', name: 'PVC Insulation', percentage: 20, atomicNumber: 6, role: 'alloying' },
+          { symbol: 'H', name: 'Hydrogen', percentage: 10, atomicNumber: 1, role: 'alloying' }
+        ],
+        specificProperties: { flexibility: 'good', fireRating: 'high' },
+        examples: ['Romex NM-B', 'THHN/THWN', 'MC Cable', 'BX Cable']
+      },
+      {
+        id: 'electrical-conduit',
+        name: 'Electrical Conduit',
+        composition: [
+          { symbol: 'C', name: 'Carbon', percentage: 85, atomicNumber: 6, role: 'base' },
+          { symbol: 'H', name: 'Hydrogen', percentage: 15, atomicNumber: 1, role: 'base' }
+        ],
+        specificProperties: { durability: 'excellent', UV_resistance: 'good' },
+        examples: ['PVC Conduit', 'EMT', 'Rigid Steel', 'Flexible Metal']
+      }
+    ]
+  },
+
+  {
+    id: 'insulation-materials',
+    name: 'Insulation Materials',
+    description: 'Materials used for thermal and acoustic insulation in residential and commercial buildings',
+    baseElements: ['Si', 'O', 'C', 'H'],
+    typicalComposition: [
+      { symbol: 'Si', name: 'Silicon', percentage: 46, atomicNumber: 14, role: 'base' },
+      { symbol: 'O', name: 'Oxygen', percentage: 54, atomicNumber: 8, role: 'base' }
+    ],
+    properties: {
+      strength: 'low',
+      conductivity: 'insulator',
+      corrosionResistance: 'excellent',
+      temperature: 'high'
+    },
+    applications: ['wall insulation', 'attic insulation', 'pipe insulation', 'sound dampening'],
+    subcategories: [
+      {
+        id: 'fibrous-insulation',
+        name: 'Fibrous Insulation',
+        composition: [
+          { symbol: 'Si', name: 'Silicon', percentage: 46, atomicNumber: 14, role: 'base' },
+          { symbol: 'O', name: 'Oxygen', percentage: 54, atomicNumber: 8, role: 'base' }
+        ],
+        specificProperties: { thermalResistance: 'good', fireResistance: 'excellent' },
+        examples: ['Fiberglass Batts', 'Mineral Wool', 'Cellulose', 'Natural Fiber']
+      },
+      {
+        id: 'foam-insulation',
+        name: 'Foam Insulation',
+        composition: [
+          { symbol: 'C', name: 'Carbon', percentage: 70, atomicNumber: 6, role: 'base' },
+          { symbol: 'H', name: 'Hydrogen', percentage: 10, atomicNumber: 1, role: 'base' },
+          { symbol: 'O', name: 'Oxygen', percentage: 15, atomicNumber: 8, role: 'alloying' },
+          { symbol: 'N', name: 'Nitrogen', percentage: 5, atomicNumber: 7, role: 'alloying' }
+        ],
+        specificProperties: { airSealing: 'excellent', moistureBarrier: 'good' },
+        examples: ['Spray Foam', 'Rigid Foam', 'Expandable Foam', 'XPS/EPS']
+      }
+    ]
+  },
+
+  {
+    id: 'roofing-materials',
+    name: 'Roofing Materials',
+    description: 'Materials used for roof covering and weather protection systems',
+    baseElements: ['C', 'H', 'Fe', 'Al'],
+    typicalComposition: [
+      { symbol: 'C', name: 'Carbon', percentage: 80, atomicNumber: 6, role: 'base' },
+      { symbol: 'H', name: 'Hydrogen', percentage: 15, atomicNumber: 1, role: 'base' },
+      { symbol: 'O', name: 'Oxygen', percentage: 5, atomicNumber: 8, role: 'alloying' }
+    ],
+    properties: {
+      strength: 'medium',
+      conductivity: 'insulator',
+      corrosionResistance: 'good',
+      temperature: 'medium'
+    },
+    applications: ['residential roofing', 'commercial roofing', 'weather barrier', 'solar mounting'],
+    subcategories: [
+      {
+        id: 'composite-shingles',
+        name: 'Composite Shingles',
+        composition: [
+          { symbol: 'C', name: 'Asphalt Base', percentage: 80, atomicNumber: 6, role: 'base' },
+          { symbol: 'Si', name: 'Mineral Granules', percentage: 15, atomicNumber: 14, role: 'alloying' },
+          { symbol: 'C', name: 'Fiberglass Mat', percentage: 5, atomicNumber: 6, role: 'alloying' }
+        ],
+        specificProperties: { weatherResistance: 'good', costEffective: 'excellent' },
+        examples: ['Asphalt Shingles', 'Architectural Shingles', 'Composite Shingles']
+      },
+      {
+        id: 'metal-roofing',
+        name: 'Metal Roofing',
+        composition: [
+          { symbol: 'Fe', name: 'Iron', percentage: 98, atomicNumber: 26, role: 'base' },
+          { symbol: 'Zn', name: 'Zinc Coating', percentage: 2, atomicNumber: 30, role: 'alloying' }
+        ],
+        specificProperties: { longevity: 'excellent', energyEfficiency: 'high' },
+        examples: ['Standing Seam Steel', 'Aluminum Roofing', 'Copper Roofing', 'Corrugated Metal']
+      }
+    ]
+  },
+
+  {
+    id: 'flooring-materials',
+    name: 'Flooring Materials',
+    description: 'Materials used for interior and exterior floor surfaces',
+    baseElements: ['C', 'H', 'Si', 'Al'],
+    typicalComposition: [
+      { symbol: 'C', name: 'Carbon', percentage: 85, atomicNumber: 6, role: 'base' },
+      { symbol: 'H', name: 'Hydrogen', percentage: 15, atomicNumber: 1, role: 'base' }
+    ],
+    properties: {
+      strength: 'medium',
+      conductivity: 'insulator',
+      corrosionResistance: 'good',
+      temperature: 'medium'
+    },
+    applications: ['residential flooring', 'commercial flooring', 'outdoor decking', 'subflooring'],
+    subcategories: [
+      {
+        id: 'vinyl-flooring',
+        name: 'Vinyl Flooring',
+        composition: [
+          { symbol: 'C', name: 'Carbon', percentage: 45, atomicNumber: 6, role: 'base' },
+          { symbol: 'H', name: 'Hydrogen', percentage: 8, atomicNumber: 1, role: 'base' },
+          { symbol: 'Cl', name: 'Chlorine', percentage: 47, atomicNumber: 17, role: 'alloying' }
+        ],
+        specificProperties: { waterResistance: 'excellent', installation: 'easy' },
+        examples: ['LVP', 'LVT', 'Sheet Vinyl', 'Vinyl Composition Tile']
+      },
+      {
+        id: 'ceramic-flooring',
+        name: 'Ceramic Flooring',
+        composition: [
+          { symbol: 'Al', name: 'Aluminum', percentage: 20, atomicNumber: 13, role: 'base' },
+          { symbol: 'Si', name: 'Silicon', percentage: 25, atomicNumber: 14, role: 'base' },
+          { symbol: 'O', name: 'Oxygen', percentage: 55, atomicNumber: 8, role: 'base' }
+        ],
+        specificProperties: { durability: 'excellent', maintenance: 'low' },
+        examples: ['Ceramic Tile', 'Porcelain Tile', 'Natural Stone', 'Terrazzo']
+      }
+    ]
+  },
+
+  {
+    id: 'structural-materials',
+    name: 'Structural Materials',
+    description: 'Materials used for load-bearing and structural components in construction',
+    baseElements: ['Fe', 'C', 'Ca', 'Si'],
+    typicalComposition: [
+      { symbol: 'Ca', name: 'Calcium', percentage: 65, atomicNumber: 20, role: 'base' },
+      { symbol: 'Si', name: 'Silicon', percentage: 20, atomicNumber: 14, role: 'base' },
+      { symbol: 'Al', name: 'Aluminum', percentage: 6, atomicNumber: 13, role: 'alloying' },
+      { symbol: 'Fe', name: 'Iron', percentage: 3, atomicNumber: 26, role: 'alloying' },
+      { symbol: 'O', name: 'Oxygen', percentage: 6, atomicNumber: 8, role: 'base' }
+    ],
+    properties: {
+      strength: 'very-high',
+      conductivity: 'insulator',
+      corrosionResistance: 'good',
+      temperature: 'high'
+    },
+    applications: ['foundations', 'structural framing', 'load-bearing walls', 'bridges'],
+    subcategories: [
+      {
+        id: 'concrete-materials',
+        name: 'Concrete Materials',
+        composition: [
+          { symbol: 'Ca', name: 'Cement', percentage: 65, atomicNumber: 20, role: 'base' },
+          { symbol: 'Si', name: 'Aggregate', percentage: 30, atomicNumber: 14, role: 'base' },
+          { symbol: 'H', name: 'Water', percentage: 5, atomicNumber: 1, role: 'alloying' }
+        ],
+        specificProperties: { compressiveStrength: 'very-high', durability: 'excellent' },
+        examples: ['Ready-Mix Concrete', 'High-Strength Concrete', 'Lightweight Concrete', 'Precast Concrete']
+      },
+      {
+        id: 'structural-steel',
+        name: 'Structural Steel',
+        composition: [
+          { symbol: 'Fe', name: 'Iron', percentage: 98, atomicNumber: 26, role: 'base' },
+          { symbol: 'C', name: 'Carbon', percentage: 0.3, atomicNumber: 6, role: 'alloying' },
+          { symbol: 'Mn', name: 'Manganese', percentage: 1.2, atomicNumber: 25, role: 'alloying' },
+          { symbol: 'Si', name: 'Silicon', percentage: 0.5, atomicNumber: 14, role: 'alloying' }
+        ],
+        specificProperties: { tensileStrength: 'very-high', weldability: 'excellent' },
+        examples: ['A36 Steel', 'A572 Steel', 'A992 Steel', 'HSS Tubing']
+      },
+      {
+        id: 'engineered-lumber',
+        name: 'Engineered Lumber',
+        composition: [
+          { symbol: 'C', name: 'Cellulose', percentage: 40, atomicNumber: 6, role: 'base' },
+          { symbol: 'H', name: 'Hydrogen', percentage: 6, atomicNumber: 1, role: 'base' },
+          { symbol: 'O', name: 'Oxygen', percentage: 44, atomicNumber: 8, role: 'base' },
+          { symbol: 'C', name: 'Adhesive', percentage: 10, atomicNumber: 6, role: 'alloying' }
+        ],
+        specificProperties: { dimensionalStability: 'excellent', sustainability: 'high' },
+        examples: ['Glulam', 'LVL', 'I-Joists', 'OSB']
+      }
+    ]
+  },
+
+  {
+    id: 'hvac-materials',
+    name: 'HVAC Materials',
+    description: 'Materials used for heating, ventilation, and air conditioning systems',
+    baseElements: ['Fe', 'Al', 'Cu'],
+    typicalComposition: [
+      { symbol: 'Fe', name: 'Iron', percentage: 98, atomicNumber: 26, role: 'base' },
+      { symbol: 'Zn', name: 'Zinc Coating', percentage: 2, atomicNumber: 30, role: 'alloying' }
+    ],
+    properties: {
+      strength: 'high',
+      conductivity: 'conductor',
+      corrosionResistance: 'good',
+      temperature: 'medium'
+    },
+    applications: ['ductwork', 'heat exchangers', 'piping systems', 'ventilation'],
+    subcategories: [
+      {
+        id: 'ductwork-materials',
+        name: 'Ductwork Materials',
+        composition: [
+          { symbol: 'Fe', name: 'Steel Base', percentage: 98, atomicNumber: 26, role: 'base' },
+          { symbol: 'Zn', name: 'Galvanized Coating', percentage: 2, atomicNumber: 30, role: 'alloying' }
+        ],
+        specificProperties: { airTightness: 'good', durability: 'high' },
+        examples: ['Galvanized Steel', 'Aluminum Ductwork', 'Flexible Duct', 'Fiberglass Duct']
+      },
+      {
+        id: 'refrigeration-lines',
+        name: 'Refrigeration Lines',
+        composition: [
+          { symbol: 'Cu', name: 'Copper', percentage: 100, atomicNumber: 29, role: 'base' }
+        ],
+        specificProperties: { thermalConductivity: 'excellent', corrosionResistance: 'good' },
+        examples: ['Copper Tubing', 'Aluminum Coils', 'Insulated Lines', 'Refrigerant Pipes']
+      }
+    ]
   }];
 
 // Utility functions for material categories
