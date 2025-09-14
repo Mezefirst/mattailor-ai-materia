@@ -14,6 +14,8 @@ import { PeriodicTable, Element } from '@/components/periodic/PeriodicTable';
 import { CompositionChart } from '@/components/charts/CompositionChart';
 import { RealTimeProperties } from '@/components/prediction/RealTimeProperties';
 import { AdvancedPropertyPrediction } from '@/components/prediction/AdvancedPropertyPrediction';
+import { AlloyOptimizer } from '@/components/optimization/AlloyOptimizer';
+import { ElementSuggestions } from '@/components/optimization/ElementSuggestions';
 import { usePropertyPrediction } from '@/hooks/usePropertyPrediction';
 import { useTranslation } from '@/lib/i18n';
 
@@ -153,7 +155,7 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
     });
   };
 
-  const optimizeComposition = async () => {
+  const optimizeComposition = async (application?: string, requirements?: string) => {
     if (selectedElements.length === 0) {
       toast.error('No elements to optimize');
       return;
@@ -162,27 +164,62 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
     setIsSimulating(true);
     
     try {
-      // Use AI to suggest optimal composition ratios
+      // Enhanced AI prompt with application-specific optimization
       const prompt = spark.llmPrompt`
-      Optimize the composition of a material with the following elements: ${selectedElements.map(e => e.element.symbol).join(', ')}
+      You are an expert metallurgist and materials engineer. Optimize the composition of an alloy with the following elements: ${selectedElements.map(e => e.element.symbol).join(', ')}
       
       Current composition: ${selectedElements.map(e => `${e.element.symbol}: ${e.percentage}%`).join(', ')}
       
-      Goals:
-      1. Maximize mechanical strength (tensile strength, hardness)
-      2. Maintain good ductility and toughness
-      3. Optimize for manufacturability
-      4. Consider cost-effectiveness
-      5. Ensure chemical stability
+      ${application ? `Target Application: ${application}` : ''}
+      ${requirements ? `Specific Requirements: ${requirements}` : ''}
       
-      Base the optimization on:
-      - Known successful alloy compositions
-      - Phase diagrams and metallurgical principles
-      - Element interactions and synergies
-      - Industrial best practices
+      Optimization Goals (in order of priority):
+      1. Optimize for the target application's specific needs
+      2. Maximize key mechanical properties (strength, toughness, fatigue resistance)
+      3. Ensure proper phase balance and microstructural stability
+      4. Optimize manufacturability and processing characteristics
+      5. Balance cost-effectiveness with performance
+      6. Consider corrosion resistance and environmental durability
+      7. Ensure chemical and thermal stability
       
-      Return optimized percentages as JSON: {"elements": [{"symbol": "Fe", "percentage": 85.2}, ...]}
-      Ensure percentages sum to exactly 100%.
+      Consider these metallurgical principles:
+      - Phase diagrams and solubility limits
+      - Grain refinement and strengthening mechanisms
+      - Precipitation hardening potential
+      - Solid solution strengthening effects
+      - Element synergies and antagonistic interactions
+      - Processing requirements (heat treatment, forming)
+      - Service environment compatibility
+      
+      Application-specific considerations:
+      - Aerospace: High strength-to-weight ratio, fatigue resistance, temperature stability
+      - Automotive: Formability, weldability, crash performance, corrosion resistance
+      - Marine: Corrosion resistance, toughness, stress corrosion cracking resistance
+      - Electronics: Thermal/electrical conductivity, coefficient of thermal expansion
+      - Medical: Biocompatibility, corrosion resistance, non-magnetic properties
+      - Construction: Weldability, weather resistance, ductility, cost-effectiveness
+      - Energy: High temperature strength, oxidation resistance, thermal cycling
+      
+      Provide detailed optimization with:
+      1. Optimized element percentages (must sum to exactly 100%)
+      2. Reasoning for each element's role and percentage
+      3. Expected property improvements
+      4. Potential challenges and processing recommendations
+      
+      Return as JSON:
+      {
+        "elements": [{"symbol": "Fe", "percentage": 85.2, "role": "primary structural element"}, ...],
+        "reasoning": "Brief explanation of optimization strategy",
+        "expectedProperties": {
+          "tensileStrength": 850,
+          "yieldStrength": 720,
+          "elongation": 15,
+          "hardness": 280,
+          "corrosionResistance": "excellent"
+        },
+        "processingNotes": "Heat treatment and forming recommendations",
+        "confidence": 92
+      }
       `;
 
       const result = await spark.llm(prompt, 'gpt-4o', true);
@@ -198,32 +235,77 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
         });
         
         setSelectedElements(newComposition);
-        toast.success('Composition optimized using AI recommendations', {
-          description: 'Ratios adjusted for enhanced properties and manufacturability'
+        
+        // Enhanced success message with optimization details
+        toast.success('AI-powered composition optimization complete!', {
+          description: optimized.reasoning || 'Composition optimized for enhanced properties and performance',
+          duration: 6000
         });
+        
+        // Show expected properties if available
+        if (optimized.expectedProperties) {
+          setTimeout(() => {
+            toast.info('Expected Property Improvements', {
+              description: `Tensile Strength: ${optimized.expectedProperties.tensileStrength || 'N/A'} MPa, Confidence: ${optimized.confidence || 'N/A'}%`,
+              duration: 5000
+            });
+          }, 1000);
+        }
+        
+        // Show processing recommendations
+        if (optimized.processingNotes) {
+          setTimeout(() => {
+            toast.info('Processing Recommendations', {
+              description: optimized.processingNotes,
+              duration: 7000
+            });
+          }, 2000);
+        }
       }
     } catch (error) {
-      // Fallback to rule-based optimization
+      console.error('AI optimization failed:', error);
+      
+      // Enhanced fallback with application-specific rules
       const optimizedComposition = selectedElements.map(item => {
         const symbol = item.element.symbol;
+        const hasElement = (sym: string) => selectedElements.some(e => e.element.symbol === sym);
         
-        // Rule-based optimization based on common alloy practices
-        if (symbol === 'Fe' && selectedElements.some(e => e.element.symbol === 'C')) {
-          return { ...item, percentage: 98.5 }; // Carbon steel
-        } else if (symbol === 'C' && selectedElements.some(e => e.element.symbol === 'Fe')) {
-          return { ...item, percentage: 0.8 }; // Medium carbon steel
-        } else if (symbol === 'Cr' && selectedElements.some(e => e.element.symbol === 'Fe')) {
-          return { ...item, percentage: 18.0 }; // Stainless steel
-        } else if (symbol === 'Ni' && selectedElements.some(e => e.element.symbol === 'Fe')) {
-          return { ...item, percentage: 8.0 }; // Austenitic stainless
-        } else if (symbol === 'Al' && selectedElements.length === 1) {
-          return { ...item, percentage: 100 }; // Pure aluminum
+        // Application-specific optimization rules
+        if (application === 'aerospace') {
+          // Aerospace alloys favor lightweight, high-strength compositions
+          if (symbol === 'Ti') return { ...item, percentage: 85.0 };
+          if (symbol === 'Al' && hasElement('Ti')) return { ...item, percentage: 6.0 };
+          if (symbol === 'V' && hasElement('Ti')) return { ...item, percentage: 4.0 };
+          if (symbol === 'Al' && !hasElement('Ti')) return { ...item, percentage: 95.0 };
+          if (symbol === 'Li' && hasElement('Al')) return { ...item, percentage: 2.0 };
+        } else if (application === 'marine') {
+          // Marine alloys prioritize corrosion resistance
+          if (symbol === 'Al') return { ...item, percentage: 90.0 };
+          if (symbol === 'Mg' && hasElement('Al')) return { ...item, percentage: 5.0 };
+          if (symbol === 'Zn' && hasElement('Al')) return { ...item, percentage: 5.0 };
+          if (symbol === 'Cu' && hasElement('Ni')) return { ...item, percentage: 70.0 };
+          if (symbol === 'Ni' && hasElement('Cu')) return { ...item, percentage: 30.0 };
+        } else if (application === 'automotive') {
+          // Automotive steels balance strength, formability, and weldability
+          if (symbol === 'Fe') return { ...item, percentage: hasElement('C') ? 97.5 : 99.0 };
+          if (symbol === 'C' && hasElement('Fe')) return { ...item, percentage: 0.15 };
+          if (symbol === 'Mn' && hasElement('Fe')) return { ...item, percentage: 1.5 };
+          if (symbol === 'Si' && hasElement('Fe')) return { ...item, percentage: 0.5 };
+        } else {
+          // General-purpose optimization rules
+          if (symbol === 'Fe' && hasElement('C')) return { ...item, percentage: 98.2 };
+          if (symbol === 'C' && hasElement('Fe')) return { ...item, percentage: 0.4 };
+          if (symbol === 'Cr' && hasElement('Fe')) return { ...item, percentage: 18.0 };
+          if (symbol === 'Ni' && hasElement('Fe') && hasElement('Cr')) return { ...item, percentage: 8.0 };
+          if (symbol === 'Al' && selectedElements.length === 1) return { ...item, percentage: 100 };
+          if (symbol === 'Cu' && selectedElements.length === 1) return { ...item, percentage: 100 };
+          if (symbol === 'Ti' && selectedElements.length === 1) return { ...item, percentage: 100 };
         }
         
         return item;
       });
       
-      // Normalize if needed
+      // Normalize composition
       const total = optimizedComposition.reduce((sum, e) => sum + e.percentage, 0);
       if (total !== 100) {
         const normalized = optimizedComposition.map(item => ({
@@ -235,7 +317,10 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
         setSelectedElements(optimizedComposition);
       }
       
-      toast.success('Composition optimized using metallurgical principles');
+      const optimizationType = application ? `${application}-specific` : 'general-purpose';
+      toast.success(`Composition optimized using ${optimizationType} metallurgical principles`, {
+        description: 'Fallback optimization applied based on industry best practices'
+      });
     } finally {
       setIsSimulating(false);
     }
@@ -592,17 +677,17 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={optimizeComposition}
+                      onClick={() => optimizeComposition()}
                       className="flex items-center gap-1"
                       disabled={selectedElements.length === 0 || isSimulating}
-                      title="AI-powered composition optimization"
+                      title="Basic AI-powered composition optimization"
                     >
                       {isSimulating ? (
                         <Lightning className="w-4 h-4 animate-pulse" />
                       ) : (
                         <Atom className="w-4 h-4" />
                       )}
-                      {isSimulating ? 'Optimizing...' : 'AI Optimize'}
+                      {isSimulating ? 'Optimizing...' : 'Quick AI Optimize'}
                     </Button>
                     <Badge 
                       variant={Math.abs(totalPercentage - 100) < 0.1 ? "default" : totalPercentage > 100 ? "destructive" : "secondary"}
@@ -732,6 +817,23 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Smart Element Suggestions */}
+      <ElementSuggestions 
+        currentElements={selectedElements}
+        onElementsAdded={(elements) => {
+          elements.forEach(element => addElement(element));
+        }}
+      />
+
+      {/* Advanced AI Alloy Optimization */}
+      <AlloyOptimizer 
+        selectedElements={selectedElements}
+        onOptimizedComposition={setSelectedElements}
+        onOptimizationStart={() => setIsSimulating(true)}
+        onOptimizationEnd={() => setIsSimulating(false)}
+        isOptimizing={isSimulating}
+      />
 
       {/* Real-time Property Prediction */}
       <RealTimeProperties 

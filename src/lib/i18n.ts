@@ -88,6 +88,42 @@ export interface Translation {
     };
   };
   
+  aiOptimization: {
+    title: string;
+    description: string;
+    targetApplication: string;
+    customRequirements: string;
+    advancedTargets: string;
+    optimizeButton: string;
+    optimizing: string;
+    confidence: string;
+    expectedProperties: string;
+    processingNotes: string;
+    optimizationHistory: string;
+    clearHistory: string;
+    apply: string;
+    elementSuggestions: string;
+    smartSuggestions: string;
+    getSuggestions: string;
+    analyzing: string;
+    composition: string;
+    keyProperties: string;
+    advantages: string;
+    considerations: string;
+    currentElements: string;
+    applications: {
+      aerospace: string;
+      automotive: string;
+      marine: string;
+      electronics: string;
+      medical: string;
+      construction: string;
+      energy: string;
+      tooling: string;
+      custom: string;
+    };
+  };
+  
   mlEnhanced: {
     title: string;
     description: string;
@@ -234,6 +270,42 @@ export const translations: Record<Language, Translation> = {
         environmental: 'Environmental Constraints',
         budget: 'Budget Constraints',
         application: 'Application Context',
+      },
+    },
+    
+    aiOptimization: {
+      title: 'AI-Powered Alloy Optimization',
+      description: 'Leverage advanced metallurgical AI to optimize element ratios for specific applications and properties',
+      targetApplication: 'Target Application',
+      customRequirements: 'Specific Requirements',
+      advancedTargets: 'Advanced Property Targets',
+      optimizeButton: 'Optimize Alloy for',
+      optimizing: 'Optimizing Alloy Composition...',
+      confidence: 'Confidence',
+      expectedProperties: 'Expected Properties',
+      processingNotes: 'Processing Recommendations',
+      optimizationHistory: 'Optimization History',
+      clearHistory: 'Clear History',
+      apply: 'Apply',
+      elementSuggestions: 'Smart Element Suggestions',
+      smartSuggestions: 'Get AI-powered recommendations for optimal element combinations based on application requirements',
+      getSuggestions: 'Get Suggestions',
+      analyzing: 'Analyzing...',
+      composition: 'Composition',
+      keyProperties: 'Key Properties',
+      advantages: 'Advantages',
+      considerations: 'Considerations',
+      currentElements: 'Current Elements',
+      applications: {
+        aerospace: '✈️ Aerospace',
+        automotive: '🚗 Automotive',
+        marine: '🚢 Marine',
+        electronics: '📱 Electronics',
+        medical: '🏥 Medical',
+        construction: '🏗️ Construction',
+        energy: '⚡ Energy',
+        tooling: '🔧 Tooling',
+        custom: '🎯 Custom',
       },
     },
     
