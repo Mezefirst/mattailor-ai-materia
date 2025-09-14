@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mattailor-backend
+  namespace: mattailor-ai
+  labels:
+    app: mattailor-backend
+    tier: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: mattailor-backend
+      tier: backend
+  template:
+    metadata:
+      labels:
+        app: mattailor-backend
+        tier: backend
+    spec:
+      containers:
+      - name: backend
+        image: mattailor-ai/backend:latest
+        ports:
+        - containerPort: 8000
+        env:
+        - name: ENVIRONMENT
+          value: "production"
+        - name: DATABASE_URL
+          value: "postgresql://mattailor_user:$(POSTGRES_PASSWORD)@postgres-service:5432/mattailor"
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mattailor-secrets
+              key: postgres-password
+        - name: MATPROJECT_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: mattailor-secrets
+              key: matproject-api-key
+        - name: MATWEB_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: mattailor-secrets
+              key: matweb-api-key
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: mattailor-secrets
+              key: openai-api-key
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mattailor-backend-service
+  namespace: mattailor-ai
+  labels:
+    app: mattailor-backend
+    tier: backend
+spec:
+  selector:
+    app: mattailor-backend
+    tier: backend
+  ports:
+  - port: 8000
+    targetPort: 8000
+    protocol: TCP
+  type: ClusterIP

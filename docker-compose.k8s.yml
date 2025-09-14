@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    image: mattailor-ai/frontend:latest
+    ports:
+      - "3000:80"
+    environment:
+      - NODE_ENV=production
+    networks:
+      - mattailor-network
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    image: mattailor-ai/backend:latest
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - DATABASE_URL=${DATABASE_URL:-postgresql://user:pass@postgres:5432/mattailor}
+      - MATPROJECT_API_KEY=${MATPROJECT_API_KEY}
+      - MATWEB_API_KEY=${MATWEB_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    networks:
+      - mattailor-network
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=mattailor
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=pass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - mattailor-network
+
+  redis:
+    image: redis:7-alpine
+    networks:
+      - mattailor-network
+
+networks:
+  mattailor-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

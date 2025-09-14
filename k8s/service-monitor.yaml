@@ -1,0 +1,31 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: mattailor-backend-monitor
+  namespace: mattailor-ai
+  labels:
+    app: mattailor-backend
+spec:
+  selector:
+    matchLabels:
+      app: mattailor-backend
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 30s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: mattailor-frontend-monitor
+  namespace: mattailor-ai
+  labels:
+    app: mattailor-frontend
+spec:
+  selector:
+    matchLabels:
+      app: mattailor-frontend
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 30s

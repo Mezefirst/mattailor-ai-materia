@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mattailor-ai
+  labels:
+    app: mattailor-ai
+    version: v1
