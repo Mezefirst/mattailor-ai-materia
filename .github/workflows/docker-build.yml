@@ -1,0 +1,106 @@
+name: Docker Build & Test
+
+on:
+  push:
+    paths:
+      - 'Dockerfile*'
+      - 'docker-compose*.yml'
+      - 'nginx.conf'
+      - 'src/**'
+      - 'public/**'
+      - 'package*.json'
+  pull_request:
+    paths:
+      - 'Dockerfile*'
+      - 'docker-compose*.yml'
+      - 'nginx.conf'
+      - 'src/**'
+      - 'public/**'
+      - 'package*.json'
+
+jobs:
+  docker-test:
+    name: Docker Build Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          tags: mattailor-ai:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Test Docker image
+        run: |
+          # Start the container
+          docker run -d --name mattailor-test -p 8080:80 mattailor-ai:test
+          
+          # Wait for container to be ready
+          sleep 10
+          
+          # Test if the application is running
+          curl -f http://localhost:8080/ || exit 1
+          
+          # Test health check
+          docker exec mattailor-test curl -f http://localhost/ || exit 1
+          
+          # Stop and remove container
+          docker stop mattailor-test
+          docker rm mattailor-test
+
+  docker-compose-test:
+    name: Docker Compose Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Test Docker Compose
+        run: |
+          # Start services
+          docker-compose up -d
+          
+          # Wait for services to be ready
+          sleep 15
+          
+          # Test if the application is running
+          curl -f http://localhost:3000/ || exit 1
+          
+          # Check container health
+          docker-compose ps
+          
+          # Stop services
+          docker-compose down
+
+  multi-arch-build:
+    name: Multi-Architecture Build Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build multi-arch image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: false
+          tags: mattailor-ai:multi-arch-test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

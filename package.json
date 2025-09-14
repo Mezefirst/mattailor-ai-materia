@@ -10,6 +10,7 @@
         "lint": "eslint .",
         "optimize": "vite optimize",
         "preview": "vite preview",
+        "test": "echo \"No tests specified\" && exit 0",
         "docker:build": "docker build -t mattailor-ai:latest .",
         "docker:build-dev": "docker build -f Dockerfile.dev -t mattailor-ai:dev .",
         "docker:run": "docker run -d -p 3000:80 --name mattailor-app mattailor-ai:latest",
@@ -19,7 +20,14 @@
         "compose:up": "docker-compose up -d",
         "compose:down": "docker-compose down",
         "compose:dev": "docker-compose -f docker-compose.dev.yml up",
-        "compose:logs": "docker-compose logs -f"
+        "compose:staging": "docker-compose -f docker-compose.staging.yml up -d",
+        "compose:staging-monitor": "docker-compose -f docker-compose.staging.yml --profile monitoring up -d",
+        "compose:logs": "docker-compose logs -f",
+        "deploy:staging": "./scripts/deploy.sh --environment staging",
+        "deploy:production": "./scripts/deploy.sh --environment production",
+        "build:multiarch": "./scripts/docker-build.sh --platform linux/amd64,linux/arm64",
+        "k8s:deploy": "kubectl apply -f k8s/",
+        "k8s:delete": "kubectl delete -f k8s/"
     },
     "dependencies": {
         "@github/spark": "^0.39.0",

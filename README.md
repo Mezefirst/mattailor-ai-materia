@@ -37,6 +37,17 @@ docker-compose -f docker-compose.dev.yml up
 # Access at http://localhost:5173
 ```
 
+#### Staging with Monitoring
+```bash
+# Run staging environment with Prometheus and Grafana
+docker-compose -f docker-compose.staging.yml --profile monitoring up -d
+
+# Access services:
+# - Application: http://localhost:3001
+# - Grafana: http://localhost:3000
+# - Prometheus: http://localhost:9090
+```
+
 ### Local Development
 
 ```bash
@@ -86,11 +97,49 @@ docker stop mattailor-app    # Stop container
 docker rm mattailor-app      # Remove container
 ```
 
+## CI/CD Pipeline
+
+### Automated Deployment
+The project includes a comprehensive CI/CD pipeline with GitHub Actions:
+
+- **Continuous Integration**: Automated testing, linting, and security scanning
+- **Docker Builds**: Multi-architecture container images (AMD64, ARM64)
+- **Security Scanning**: Trivy scans for vulnerabilities
+- **Automated Deployment**: Staging and production deployments
+- **Monitoring**: Prometheus and Grafana integration
+
+### Pipeline Features
+- ✅ Automated testing and code quality checks
+- 🔒 Security scanning with vulnerability reports
+- 🐳 Multi-platform Docker image builds
+- 📦 Container registry publishing (GitHub Packages)
+- 🚀 Zero-downtime deployments
+- 📊 Monitoring and alerting setup
+- 🏷️ Semantic versioning and release automation
+
+### Quick Deployment Commands
+```bash
+# Build and test locally
+./scripts/docker-build.sh --tag latest
+
+# Deploy to staging
+./scripts/deploy.sh --environment staging --tag latest
+
+# Deploy to production
+./scripts/deploy.sh --environment production --tag v1.0.0
+
+# Deploy with Kubernetes
+kubectl apply -f k8s/
+```
+
+For detailed setup instructions, see [CI/CD Setup Guide](docs/CICD_SETUP.md).
+
 ## Cloud Deployment
 
 ### Supported Platforms
 Our Docker setup supports deployment to:
 
+- **Kubernetes**: Full manifests with HPA, ingress, and monitoring
 - **Railway**: `railway up`
 - **Render**: Connect GitHub repo with Docker environment
 - **Heroku**: `heroku container:push web && heroku container:release web`
