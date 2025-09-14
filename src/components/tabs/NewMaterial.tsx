@@ -16,6 +16,10 @@ import { RealTimeProperties } from '@/components/prediction/RealTimeProperties';
 import { AdvancedPropertyPrediction } from '@/components/prediction/AdvancedPropertyPrediction';
 import { AlloyOptimizer } from '@/components/optimization/AlloyOptimizer';
 import { ElementSuggestions } from '@/components/optimization/ElementSuggestions';
+import { HighEntropyAlloys } from '@/components/optimization/HighEntropyAlloys';
+import { BreakthroughMaterials } from '@/components/optimization/BreakthroughMaterials';
+import { AdvancedElementDiscovery } from '@/components/optimization/AdvancedElementDiscovery';
+import { MaterialCategories } from '@/components/optimization/MaterialCategories';
 import { usePropertyPrediction } from '@/hooks/usePropertyPrediction';
 import { useTranslation } from '@/lib/i18n';
 
@@ -817,6 +821,43 @@ export function NewMaterial({ onMaterialCreated }: NewMaterialProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Material Categories Laboratory */}
+      <MaterialCategories 
+        onCategoryGenerated={setSelectedElements}
+        onOptimizationStart={() => setIsSimulating(true)}
+        onOptimizationEnd={() => setIsSimulating(false)}
+        isOptimizing={isSimulating}
+      />
+
+      {/* Advanced Element Discovery */}
+      <AdvancedElementDiscovery 
+        selectedElements={selectedElements}
+        onElementsDiscovered={(elements) => {
+          elements.forEach(element => addElement(element));
+        }}
+        onOptimizationStart={() => setIsSimulating(true)}
+        onOptimizationEnd={() => setIsSimulating(false)}
+        isOptimizing={isSimulating}
+      />
+
+      {/* Breakthrough Materials Laboratory */}
+      <BreakthroughMaterials 
+        selectedElements={selectedElements}
+        onBreakthroughGenerated={setSelectedElements}
+        onOptimizationStart={() => setIsSimulating(true)}
+        onOptimizationEnd={() => setIsSimulating(false)}
+        isOptimizing={isSimulating}
+      />
+
+      {/* High-Entropy Alloy Laboratory */}
+      <HighEntropyAlloys 
+        selectedElements={selectedElements}
+        onHEAGenerated={setSelectedElements}
+        onOptimizationStart={() => setIsSimulating(true)}
+        onOptimizationEnd={() => setIsSimulating(false)}
+        isOptimizing={isSimulating}
+      />
 
       {/* Smart Element Suggestions */}
       <ElementSuggestions 
