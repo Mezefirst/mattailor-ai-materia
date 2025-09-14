@@ -49,7 +49,7 @@ echo ""
 
 # Required API Keys
 set_secret "MATWEB_API_KEY" "API key for MatWeb material database"
-set_secret "MATERIALS_PROJECT_API_KEY" "API key for Materials Project database"
+set_secret "MATERIALS_PROJECT_API_KEY" "75IUTwm6slK3D1OESCqAsl24FWu4Oaup"
 
 # Optional integrations
 echo ""
