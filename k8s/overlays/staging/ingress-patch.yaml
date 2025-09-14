@@ -1,0 +1,35 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mattailor-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    cert-manager.io/cluster-issuer: "letsencrypt-staging"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  tls:
+  - hosts:
+    - staging.mattailor.ai
+    - api-staging.mattailor.ai
+    secretName: mattailor-staging-tls
+  rules:
+  - host: staging.mattailor.ai
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: staging-mattailor-frontend-service
+            port:
+              number: 80
+  - host: api-staging.mattailor.ai
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: staging-mattailor-backend-service
+            port:
+              number: 8000

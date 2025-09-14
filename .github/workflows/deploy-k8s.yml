@@ -1,0 +1,288 @@
+name: Deploy to Kubernetes
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+      - develop
+  pull_request:
+    branches:
+      - main
+      - staging
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME_FRONTEND: ${{ github.repository }}/frontend
+  IMAGE_NAME_BACKEND: ${{ github.repository }}/backend
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+      image-digest: ${{ steps.build.outputs.digest }}
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: |
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: Build and push Frontend image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile.frontend
+        push: true
+        tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Build and push Backend image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile.backend
+        push: true
+        tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  deploy-dev:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
+    environment: development
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Configure kubectl
+      uses: azure/k8s-set-context@v3
+      with:
+        method: kubeconfig
+        kubeconfig: ${{ secrets.KUBE_CONFIG_DEV }}
+
+    - name: Deploy to Development
+      run: |
+        # Update image tags in kustomization
+        cd k8s/overlays/development
+        kustomize edit set image mattailor-ai/frontend=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:develop
+        kustomize edit set image mattailor-ai/backend=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:develop
+        
+        # Apply deployment
+        kubectl apply -k .
+        
+        # Wait for rollout
+        kubectl rollout status deployment/dev-mattailor-frontend -n mattailor-ai-dev --timeout=300s
+        kubectl rollout status deployment/dev-mattailor-backend -n mattailor-ai-dev --timeout=300s
+
+    - name: Run Health Check
+      run: |
+        # Wait for services to be ready
+        kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=mattailor-ai -n mattailor-ai-dev --timeout=300s
+        
+        # Check service endpoints
+        kubectl get endpoints -n mattailor-ai-dev
+
+  deploy-staging:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/staging'
+    environment: staging
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Configure kubectl
+      uses: azure/k8s-set-context@v3
+      with:
+        method: kubeconfig
+        kubeconfig: ${{ secrets.KUBE_CONFIG_STAGING }}
+
+    - name: Deploy to Staging
+      run: |
+        # Update image tags in kustomization
+        cd k8s/overlays/staging
+        kustomize edit set image mattailor-ai/frontend=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:staging
+        kustomize edit set image mattailor-ai/backend=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:staging
+        
+        # Apply deployment
+        kubectl apply -k .
+        
+        # Wait for rollout
+        kubectl rollout status deployment/staging-mattailor-frontend -n mattailor-ai-staging --timeout=600s
+        kubectl rollout status deployment/staging-mattailor-backend -n mattailor-ai-staging --timeout=600s
+
+    - name: Run Integration Tests
+      run: |
+        # Wait for services to be ready
+        kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=mattailor-ai -n mattailor-ai-staging --timeout=300s
+        
+        # Run basic health checks
+        kubectl exec deployment/staging-mattailor-backend -n mattailor-ai-staging -- curl -f http://localhost:8000/health
+
+    - name: Notify Slack
+      if: success()
+      uses: 8398a7/action-slack@v3
+      with:
+        status: success
+        text: "MatTailor AI successfully deployed to staging environment"
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  deploy-production:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Configure kubectl
+      uses: azure/k8s-set-context@v3
+      with:
+        method: kubeconfig
+        kubeconfig: ${{ secrets.KUBE_CONFIG_PROD }}
+
+    - name: Pre-deployment Validation
+      run: |
+        # Validate manifests
+        cd k8s/overlays/production
+        kubectl kustomize . | kubectl apply --dry-run=client -f -
+        
+        # Check cluster resources
+        kubectl top nodes
+        kubectl get pv
+
+    - name: Deploy to Production
+      run: |
+        # Update image tags in kustomization
+        cd k8s/overlays/production
+        kustomize edit set image mattailor-ai/frontend=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:latest
+        kustomize edit set image mattailor-ai/backend=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:latest
+        
+        # Apply deployment with rolling update
+        kubectl apply -k .
+        
+        # Wait for rollout to complete
+        kubectl rollout status deployment/prod-mattailor-frontend -n mattailor-ai-prod --timeout=900s
+        kubectl rollout status deployment/prod-mattailor-backend -n mattailor-ai-prod --timeout=900s
+
+    - name: Post-deployment Tests
+      run: |
+        # Wait for all pods to be ready
+        kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=mattailor-ai -n mattailor-ai-prod --timeout=300s
+        
+        # Health check
+        kubectl exec deployment/prod-mattailor-backend -n mattailor-ai-prod -- curl -f http://localhost:8000/health
+        
+        # Check HPA status
+        kubectl get hpa -n mattailor-ai-prod
+
+    - name: Create GitHub Release
+      if: success()
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ github.run_number }}
+        release_name: Release v${{ github.run_number }}
+        body: |
+          ## Changes
+          - Automated deployment from commit ${{ github.sha }}
+          
+          ## Deployment Details
+          - Frontend Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:latest
+          - Backend Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:latest
+          - Deployment Time: ${{ github.event.head_commit.timestamp }}
+        draft: false
+        prerelease: false
+
+    - name: Notify Teams
+      if: success()
+      uses: 8398a7/action-slack@v3
+      with:
+        status: success
+        text: "🚀 MatTailor AI v${{ github.run_number }} successfully deployed to production!"
+        fields: repo,message,commit,author,action,eventName,ref,workflow
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  security-scan:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:latest
+        format: sarif
+        output: trivy-results.sarif
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: trivy-results.sarif
+
+  rollback:
+    runs-on: ubuntu-latest
+    if: failure()
+    needs: [deploy-production]
+    environment: production
+    
+    steps:
+    - name: Rollback Production Deployment
+      run: |
+        # Rollback to previous version
+        kubectl rollout undo deployment/prod-mattailor-frontend -n mattailor-ai-prod
+        kubectl rollout undo deployment/prod-mattailor-backend -n mattailor-ai-prod
+        
+        # Wait for rollback to complete
+        kubectl rollout status deployment/prod-mattailor-frontend -n mattailor-ai-prod --timeout=300s
+        kubectl rollout status deployment/prod-mattailor-backend -n mattailor-ai-prod --timeout=300s
+
+    - name: Notify Rollback
+      uses: 8398a7/action-slack@v3
+      with:
+        status: failure
+        text: "⚠️ Production deployment failed and was rolled back"
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

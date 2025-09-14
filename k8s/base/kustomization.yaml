@@ -11,20 +11,12 @@ resources:
   - redis-deployment.yaml
   - frontend-deployment.yaml
   - backend-deployment.yaml
-  - ingress.yaml
-  - hpa.yaml
-  - network-policy.yaml
-  - service-monitor.yaml
+  - service.yaml
 
 namespace: mattailor-ai
 
 commonLabels:
   app.kubernetes.io/name: mattailor-ai
-  app.kubernetes.io/version: "1.0.0"
   app.kubernetes.io/component: web-application
 
-images:
-  - name: mattailor-ai/frontend
-    newTag: latest
-  - name: mattailor-ai/backend
-    newTag: latest
+# Base configuration - environment-specific values will be overridden in overlays

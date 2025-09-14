@@ -1,0 +1,34 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: mattailor-ai-dev
+
+resources:
+  - ../../base
+
+commonLabels:
+  app.kubernetes.io/version: "dev"
+  environment: development
+
+namePrefix: dev-
+
+images:
+  - name: mattailor-ai/frontend
+    newTag: dev
+  - name: mattailor-ai/backend
+    newTag: dev
+
+patches:
+  - path: configmap-patch.yaml
+  - path: deployment-patch.yaml
+  - path: service-patch.yaml
+
+replicas:
+  - name: mattailor-frontend
+    count: 1
+  - name: mattailor-backend
+    count: 1
+  - name: postgres
+    count: 1
+  - name: redis
+    count: 1

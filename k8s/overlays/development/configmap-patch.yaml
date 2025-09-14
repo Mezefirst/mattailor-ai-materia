@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mattailor-config
+data:
+  # Development environment configuration
+  ENVIRONMENT: "development"
+  DEBUG: "true"
+  LOG_LEVEL: "debug"
+  
+  # Frontend configuration
+  VITE_API_URL: "http://localhost:8000"
+  VITE_APP_TITLE: "MatTailor AI - Development"
+  
+  # Backend configuration
+  DATABASE_URL: "postgresql://mattailor:password@postgres:5432/mattailor_dev"
+  REDIS_URL: "redis://redis:6379/0"
+  ALLOWED_ORIGINS: "http://localhost:5173,http://localhost:3000"
+  
+  # External APIs (development/sandbox)
+  MATWORLD_API_URL: "https://api-dev.matworld.com"
+  MATERIALS_PROJECT_API_URL: "https://api-dev.materialsproject.org"
+  
+  # Feature flags
+  ENABLE_EXTERNAL_APIS: "false"
+  ENABLE_ML_PREDICTIONS: "true"
+  ENABLE_CACHING: "false"

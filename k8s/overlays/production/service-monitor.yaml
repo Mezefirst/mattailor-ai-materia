@@ -1,0 +1,74 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: mattailor-frontend-monitor
+  labels:
+    app.kubernetes.io/name: mattailor-ai
+    app.kubernetes.io/component: frontend
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: mattailor-ai
+      app.kubernetes.io/component: frontend
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: mattailor-backend-monitor
+  labels:
+    app.kubernetes.io/name: mattailor-ai
+    app.kubernetes.io/component: backend
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: mattailor-ai
+      app.kubernetes.io/component: backend
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: mattailor-postgres-monitor
+  labels:
+    app.kubernetes.io/name: mattailor-ai
+    app.kubernetes.io/component: database
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: mattailor-ai
+      app.kubernetes.io/component: database
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: mattailor-redis-monitor
+  labels:
+    app.kubernetes.io/name: mattailor-ai
+    app.kubernetes.io/component: cache
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: mattailor-ai
+      app.kubernetes.io/component: cache
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
