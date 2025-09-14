@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: mattailor-ai-production
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/your-username/mattailor-ai
+    targetRevision: HEAD
+    path: k8s/overlays/production
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: mattailor-ai-production
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
+  revisionHistoryLimit: 5

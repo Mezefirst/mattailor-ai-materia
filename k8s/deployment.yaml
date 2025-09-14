@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mattailor-ai
+  namespace: mattailor-ai
+  labels:
+    app: mattailor-ai
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: mattailor-ai
+  template:
+    metadata:
+      labels:
+        app: mattailor-ai
+    spec:
+      containers:
+      - name: mattailor-ai
+        image: ghcr.io/your-username/mattailor-ai:latest
+        ports:
+        - containerPort: 80
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: MATWEB_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: api-secrets
+              key: matweb-api-key
+        - name: MATERIALS_PROJECT_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: api-secrets
+              key: materials-project-api-key
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "250m"
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1001
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL

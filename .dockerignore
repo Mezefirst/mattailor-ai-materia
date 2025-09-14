@@ -14,69 +14,53 @@ build
 .env.development.local
 .env.test.local
 .env.production.local
-.env.staging
-.env.production
-
-# IDE and editor files
-.vscode
-.idea
-*.swp
-*.swo
-*~
-
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# Logs
-logs
-*.log
-
-# Runtime data
-pids
-*.pid
-*.seed
-*.pid.lock
-
-# Coverage directory used by tools like istanbul
-coverage
 
 # Git
 .git
 .gitignore
 
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
 # Docker
-Dockerfile*
-docker-compose*.yml
+Dockerfile
+docker-compose.yml
 .dockerignore
+
+# CI/CD
+.github
 
 # Documentation
 README.md
-*.md
+DEPLOYMENT.md
+docs/
 
-# Deployment scripts
+# Scripts
 scripts/
-deploy/
+
+# Kubernetes
+k8s/
+argocd/
+
+# Logs
+logs
+*.log
+
+# Cache
+.cache
+.parcel-cache
+
+# Testing
+coverage
+.nyc_output
 
 # Temporary files
-tmp/
-temp/
-
-# Backend specific (if building from root)
-backend/venv/
-backend/__pycache__/
-backend/*.pyc
-backend/.pytest_cache/
-
-# Test files
-tests/
-test/
-*.test.js
-*.test.ts
-*.spec.js
-*.spec.ts
+*.tmp
+*.temp

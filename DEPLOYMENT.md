@@ -1,347 +1,285 @@
-# MatTailor AI Deployment Guide
+# MatTailor AI - Deployment Guide
 
-This guide covers deploying MatTailor AI across different environments using Docker containers.
+This guide covers automated deployment configuration for MatTailor AI using GitHub Actions, Docker, and Kubernetes.
 
-## Quick Start
+## 🔐 GitHub Repository Secrets
 
-### Prerequisites
-- Docker and Docker Compose installed
-- Node.js 18+ (for development)
-- Git (for CI/CD)
+### Required Secrets
 
-### Environment Setup
+Configure these secrets in your GitHub repository (`Settings > Secrets and variables > Actions`):
 
-1. **Copy environment template:**
-   ```bash
-   cp .env.example .env
-   ```
+| Secret Name | Description | Required |
+|-------------|-------------|----------|
+| `MATWEB_API_KEY` | API key for MatWeb material database | Yes |
+| `MATERIALS_PROJECT_API_KEY` | API key for Materials Project database | Yes |
+| `OPENAI_API_KEY` | OpenAI API key for AI recommendations | Optional |
+| `SNYK_TOKEN` | Snyk token for security scanning | Optional |
+| `DATABASE_URL` | PostgreSQL database URL | Optional |
+| `REDIS_URL` | Redis cache URL | Optional |
 
-2. **Configure API keys in your environment file:**
-   ```bash
-   MATWEBAPI_KEY=your_matweb_api_key_here
-   MP_API_KEY=your_materials_project_api_key_here
-   OPENAI_API_KEY=your_openai_api_key_here
-   ```
+### Quick Setup
 
-3. **Make deployment script executable:**
-   ```bash
-   chmod +x scripts/deploy.sh
-   ```
-
-## Deployment Environments
-
-### Development Environment
-
-For local development with hot reloading:
+Run the setup script to configure secrets interactively:
 
 ```bash
-# Using the deployment script
-./scripts/deploy.sh development --build
-
-# Or manually with Docker Compose
-docker-compose -f docker-compose.dev.yml up --build
+./scripts/setup-secrets.sh
 ```
 
-**Access URLs:**
-- Frontend: http://localhost:5173
-- Backend: http://localhost:8000
-- API Docs: http://localhost:8000/docs
-
-### Staging Environment
-
-For testing in a production-like environment:
+Or set them manually using GitHub CLI:
 
 ```bash
-# Set up staging environment file
-cp .env.example .env.staging
-
-# Deploy to staging
-./scripts/deploy.sh staging --build
-
-# Or manually
-export IMAGE_TAG=latest
-docker-compose -f deploy/docker-compose.staging.yml up -d
+gh secret set MATWEB_API_KEY --body "your-api-key-here"
+gh secret set MATERIALS_PROJECT_API_KEY --body "your-api-key-here"
 ```
 
-**Access URLs:**
-- Frontend: https://staging.mattailor.ai
-- Backend: https://api-staging.mattailor.ai
+## 🚀 Automated CI/CD Pipeline
 
-### Production Environment
+The pipeline is triggered on:
+- Push to `main` or `develop` branches
+- Pull requests to `main`
+- Release publication
 
-For production deployment with monitoring and load balancing:
+### Pipeline Stages
+
+1. **Test** - Run unit tests, linting, and build validation
+2. **Build & Push** - Build Docker image and push to GitHub Container Registry
+3. **Deploy Staging** - Auto-deploy `develop` branch to staging
+4. **Deploy Production** - Auto-deploy `main` branch to production
+
+### Workflow Files
+
+- `.github/workflows/ci-cd.yml` - Main CI/CD pipeline
+- `.github/workflows/security-scan.yml` - Security scanning
+
+## 🐳 Docker Deployment
+
+### Local Testing
+
+Test the deployment pipeline locally:
 
 ```bash
-# Set up production environment file
-cp .env.example .env.production
-
-# Deploy to production (with safety confirmation)
-./scripts/deploy.sh production
-
-# Or manually
-export IMAGE_TAG=v1.0.0
-export DOCKER_USERNAME=your_username
-docker-compose -f deploy/docker-compose.production.yml up -d
+./scripts/test-deployment.sh
 ```
 
-**Access URLs:**
-- Frontend: https://mattailor.ai
-- Backend: https://api.mattailor.ai
-- Monitoring: https://monitoring.mattailor.ai
-- Dashboards: https://dashboards.mattailor.ai
+### Docker Compose
 
-## CI/CD Pipeline
+Deploy with Docker Compose:
 
-### GitHub Actions Setup
-
-1. **Configure repository secrets:**
-   ```
-   DOCKER_USERNAME=your_docker_hub_username
-   DOCKER_PASSWORD=your_docker_hub_password
-   MATWEBAPI_KEY=your_matweb_api_key
-   MP_API_KEY=your_materials_project_api_key
-   OPENAI_API_KEY=your_openai_api_key
-   POSTGRES_PASSWORD=secure_database_password
-   ACME_EMAIL=your_email_for_ssl_certificates
-   GRAFANA_ADMIN_PASSWORD=grafana_admin_password
-   ```
-
-2. **Automated deployments:**
-   - Push to `develop` branch → Deploy to staging
-   - Push to `main` branch → Deploy to production
-   - Pull requests → Run tests and build checks
-
-### Manual Deployment Steps
-
-1. **Build and push Docker images:**
-   ```bash
-   # Build images
-   docker build -t your_username/mattailor-frontend:latest .
-   docker build -t your_username/mattailor-backend:latest backend/
-
-   # Push to registry
-   docker push your_username/mattailor-frontend:latest
-   docker push your_username/mattailor-backend:latest
-   ```
-
-2. **Deploy to target environment:**
-   ```bash
-   # Set environment variables
-   export DOCKER_USERNAME=your_username
-   export IMAGE_TAG=latest
-
-   # Deploy
-   docker-compose -f deploy/docker-compose.production.yml up -d
-   ```
-
-## Environment Configuration
-
-### Required Environment Variables
-
-| Variable | Development | Staging | Production | Description |
-|----------|-------------|---------|------------|-------------|
-| `NODE_ENV` | development | staging | production | Application environment |
-| `MATWEBAPI_KEY` | Optional | Required | Required | MatWeb API access key |
-| `MP_API_KEY` | Optional | Required | Required | Materials Project API key |
-| `OPENAI_API_KEY` | Optional | Required | Required | OpenAI API key for AI features |
-| `DATABASE_URL` | SQLite | PostgreSQL | PostgreSQL | Database connection string |
-| `POSTGRES_PASSWORD` | - | Required | Required | Database password |
-| `DOCKER_USERNAME` | - | Required | Required | Docker Hub username |
-| `ACME_EMAIL` | - | Required | Required | Email for SSL certificates |
-
-### API Keys Setup
-
-#### MatWeb API Key
-1. Register at [MatWeb](https://www.matweb.com/api/)
-2. Subscribe to appropriate plan
-3. Add key to environment variables
-
-#### Materials Project API Key
-1. Register at [Materials Project](https://materialsproject.org/)
-2. Generate API key from user profile
-3. Add key to environment variables
-
-#### OpenAI API Key
-1. Create account at [OpenAI](https://platform.openai.com/)
-2. Generate API key
-3. Add key to environment variables
-
-## Monitoring and Logging
-
-### Production Monitoring Stack
-
-The production environment includes:
-- **Traefik**: Load balancer and SSL termination
-- **Prometheus**: Metrics collection
-- **Grafana**: Visualization dashboards
-- **PostgreSQL**: Primary database
-- **Redis**: Caching layer
-
-### Health Checks
-
-All services include health check endpoints:
-- Frontend: `GET /health`
-- Backend: `GET /health`
-- Database: Built-in PostgreSQL health checks
-- Redis: Built-in Redis health checks
-
-### Log Management
-
-View logs for specific services:
 ```bash
-# All services
+# Copy environment file
+cp .env.example .env
+# Edit .env with your API keys
+
+# Start services
+docker-compose up -d
+
+# View logs
 docker-compose logs -f
 
-# Specific service
-docker-compose logs -f frontend-prod
-
-# Follow logs during deployment
-./scripts/deploy.sh production --logs
+# Stop services
+docker-compose down
 ```
 
-## Scaling and Performance
+### Manual Docker Build
 
-### Horizontal Scaling
+```bash
+# Build image
+docker build -t mattailor-ai:latest .
 
-Production services are configured with multiple replicas:
-- Frontend: 2 replicas
-- Backend: 3 replicas
-- Database: Single instance with backup recommendations
+# Run container
+docker run -d \
+  --name mattailor-ai \
+  -p 3000:80 \
+  -e MATWEB_API_KEY="your-key" \
+  -e MATERIALS_PROJECT_API_KEY="your-key" \
+  mattailor-ai:latest
+```
 
-### Resource Limits
+## ☸️ Kubernetes Deployment
 
-Each service has defined resource limits:
-- Frontend: 512MB memory limit
-- Backend: 1GB memory limit
-- Database: 2GB memory limit
-- Redis: 512MB memory limit
+### Prerequisites
 
-### Performance Optimization
+- Kubernetes cluster
+- kubectl configured
+- Kustomize installed
 
-1. **Frontend optimizations:**
-   - Nginx gzip compression
-   - Static asset caching
-   - CDN integration ready
+### Base Deployment
 
-2. **Backend optimizations:**
-   - Redis caching layer
-   - Database connection pooling
-   - API response caching
+```bash
+# Apply base configuration
+kubectl apply -k k8s/
 
-3. **Database optimizations:**
-   - Indexed queries
-   - Connection pooling
-   - Read replicas (recommended)
+# Check deployment status
+kubectl get pods -n mattailor-ai
+```
 
-## Security Considerations
+### Environment-Specific Deployments
 
-### Production Security Features
+#### Staging
 
-1. **SSL/TLS encryption** via Let's Encrypt
-2. **Security headers** in Nginx configuration
-3. **Container security** with non-root users
-4. **Network isolation** via Docker networks
-5. **Environment variable protection**
+```bash
+kubectl apply -k k8s/overlays/staging/
+```
 
-### Security Best Practices
+#### Production  
 
-1. **Never commit secrets** to version control
-2. **Use strong passwords** for all services
-3. **Regular security updates** for base images
-4. **Network segmentation** between environments
-5. **Regular backup procedures**
+```bash
+kubectl apply -k k8s/overlays/production/
+```
 
-## Troubleshooting
+### Secrets Configuration
+
+Create Kubernetes secrets:
+
+```bash
+# Create API secrets
+kubectl create secret generic api-secrets \
+  --from-literal=matweb-api-key="your-key" \
+  --from-literal=materials-project-api-key="your-key" \
+  -n mattailor-ai
+
+# Create Docker registry secret  
+kubectl create secret docker-registry registry-secret \
+  --docker-server=ghcr.io \
+  --docker-username=your-username \
+  --docker-password=your-token \
+  -n mattailor-ai
+```
+
+## 🔄 GitOps with ArgoCD
+
+### Setup ArgoCD Application
+
+```bash
+# Apply ArgoCD application
+kubectl apply -f argocd/application.yaml
+
+# Check sync status
+argocd app get mattailor-ai-production
+```
+
+### Auto-sync Configuration
+
+ArgoCD will automatically:
+- Monitor the Git repository
+- Sync changes to Kubernetes
+- Self-heal any configuration drift
+
+## 🔍 Monitoring & Health Checks
+
+### Health Endpoints
+
+- `/health` - Basic health check
+- Container health checks configured
+
+### Monitoring
+
+- Kubernetes readiness and liveness probes
+- Container resource limits and requests
+- Security scanning with Trivy and Snyk
+
+## 🛡️ Security
+
+### Container Security
+
+- Non-root user (UID 1001)
+- Read-only root filesystem
+- No privilege escalation
+- Dropped capabilities
+
+### Network Security
+
+- HTTPS/TLS termination at ingress
+- Security headers configured
+- CSP policies applied
+
+### Vulnerability Scanning
+
+- Daily security scans with Snyk
+- Container scanning with Trivy
+- CodeQL analysis for code security
+
+## 📊 Performance & Scaling
+
+### Resource Configuration
+
+#### Staging
+- CPU: 100m request, 200m limit
+- Memory: 32Mi request, 64Mi limit
+- Replicas: 1
+
+#### Production
+- CPU: 500m request, 1000m limit  
+- Memory: 128Mi request, 256Mi limit
+- Replicas: 5
+
+### Horizontal Pod Autoscaling
+
+```yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: mattailor-ai-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: mattailor-ai
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+```
+
+## 🔧 Troubleshooting
 
 ### Common Issues
 
-1. **Build failures:**
-   ```bash
-   # Clean build cache
-   docker system prune -a
-   
-   # Rebuild without cache
-   docker-compose build --no-cache
-   ```
+1. **Build failures** - Check GitHub Actions logs
+2. **Image pull errors** - Verify registry credentials
+3. **Pod crashes** - Check resource limits and logs
+4. **API errors** - Verify secret configuration
 
-2. **Port conflicts:**
-   ```bash
-   # Check port usage
-   docker ps
-   netstat -tulpn
-   
-   # Stop conflicting services
-   docker-compose down
-   ```
+### Debug Commands
 
-3. **Database connection issues:**
-   ```bash
-   # Check database logs
-   docker-compose logs postgres-prod
-   
-   # Test connection
-   docker-compose exec postgres-prod psql -U mattailor_prod -d mattailor_prod
-   ```
+```bash
+# Check pod logs
+kubectl logs -f deployment/mattailor-ai -n mattailor-ai
 
-4. **SSL certificate issues:**
-   ```bash
-   # Check Traefik logs
-   docker-compose logs traefik-prod
-   
-   # Verify certificate
-   openssl s_client -connect mattailor.ai:443
-   ```
+# Describe pod for events
+kubectl describe pod <pod-name> -n mattailor-ai
 
-### Recovery Procedures
+# Check secrets
+kubectl get secrets -n mattailor-ai
 
-1. **Database backup and restore:**
-   ```bash
-   # Backup
-   docker-compose exec postgres-prod pg_dump -U mattailor_prod mattailor_prod > backup.sql
-   
-   # Restore
-   docker-compose exec -T postgres-prod psql -U mattailor_prod mattailor_prod < backup.sql
-   ```
+# Test health endpoint
+kubectl port-forward svc/mattailor-ai-service 8080:80 -n mattailor-ai
+curl http://localhost:8080/health
+```
 
-2. **Container recovery:**
-   ```bash
-   # Restart specific service
-   docker-compose restart backend-prod
-   
-   # Full environment restart
-   docker-compose down && docker-compose up -d
-   ```
+## 📈 Deployment Environments
 
-## Support and Maintenance
+| Environment | Branch | Namespace | Replicas | Resources |
+|-------------|---------|-----------|----------|-----------|
+| Staging | develop | mattailor-ai-staging | 1 | Small |
+| Production | main | mattailor-ai-production | 5 | Large |
 
-### Regular Maintenance Tasks
+## 🚀 Quick Deploy Checklist
 
-1. **Weekly:**
-   - Monitor resource usage
-   - Check application logs
-   - Verify backup procedures
+- [ ] Configure GitHub repository secrets
+- [ ] Set up environment files
+- [ ] Test local Docker build
+- [ ] Push to develop branch (staging deploy)
+- [ ] Verify staging deployment
+- [ ] Create pull request to main
+- [ ] Merge to main (production deploy)
+- [ ] Monitor production deployment
 
-2. **Monthly:**
-   - Update base Docker images
-   - Review security patches
-   - Analyze performance metrics
+---
 
-3. **Quarterly:**
-   - Capacity planning review
-   - Security audit
-   - Disaster recovery testing
-
-### Getting Help
-
-- Check logs first: `docker-compose logs [service-name]`
-- Review this deployment guide
-- Check GitHub Issues for known problems
-- Contact the development team
-
-## Additional Resources
-
-- [Docker Documentation](https://docs.docker.com/)
-- [Docker Compose Reference](https://docs.docker.com/compose/)
-- [Traefik Documentation](https://doc.traefik.io/traefik/)
-- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
-- [Redis Documentation](https://redis.io/documentation)
+For additional support, check the [troubleshooting section](#troubleshooting) or create an issue in the repository.

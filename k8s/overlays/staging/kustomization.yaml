@@ -5,31 +5,13 @@ namespace: mattailor-ai-staging
 
 resources:
   - ../../base
-  - hpa.yaml
 
-commonLabels:
-  app.kubernetes.io/version: "staging"
-  environment: staging
-
-namePrefix: staging-
+patchesStrategicMerge:
+  - deployment-patch.yaml
 
 images:
-  - name: mattailor-ai/frontend
-    newTag: staging
-  - name: mattailor-ai/backend
+  - name: ghcr.io/your-username/mattailor-ai
     newTag: staging
 
-patches:
-  - path: configmap-patch.yaml
-  - path: deployment-patch.yaml
-  - path: ingress-patch.yaml
-
-replicas:
-  - name: mattailor-frontend
-    count: 2
-  - name: mattailor-backend
-    count: 2
-  - name: postgres
-    count: 1
-  - name: redis
-    count: 1
+commonLabels:
+  environment: staging

@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mattailor-ai-service
+  namespace: mattailor-ai
+  labels:
+    app: mattailor-ai
+spec:
+  selector:
+    app: mattailor-ai
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+  type: ClusterIP
