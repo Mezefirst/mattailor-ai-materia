@@ -97,42 +97,84 @@ docker stop mattailor-app    # Stop container
 docker rm mattailor-app      # Remove container
 ```
 
-## CI/CD Pipeline
+## 🚀 Automated CI/CD Pipeline
 
-### Automated Deployment
-The project includes a comprehensive CI/CD pipeline with GitHub Actions:
+### Production-Ready Deployment
+MatTailor AI includes enterprise-grade CI/CD with GitHub Actions supporting multiple cloud platforms:
 
-- **Continuous Integration**: Automated testing, linting, and security scanning
-- **Docker Builds**: Multi-architecture container images (AMD64, ARM64)
-- **Security Scanning**: Trivy scans for vulnerabilities
-- **Automated Deployment**: Staging and production deployments
-- **Monitoring**: Prometheus and Grafana integration
+#### 🏗️ Build & Security
+- **Multi-Architecture Builds**: AMD64 & ARM64 Docker images
+- **Security Scanning**: Trivy vulnerability detection
+- **Code Quality**: ESLint, TypeScript checking, automated testing
+- **Container Registry**: GitHub Container Registry (GHCR) integration
 
-### Pipeline Features
-- ✅ Automated testing and code quality checks
-- 🔒 Security scanning with vulnerability reports
-- 🐳 Multi-platform Docker image builds
-- 📦 Container registry publishing (GitHub Packages)
-- 🚀 Zero-downtime deployments
-- 📊 Monitoring and alerting setup
-- 🏷️ Semantic versioning and release automation
+#### ☁️ Multi-Cloud Deployment Support
+- **Railway** - One-click deployment (recommended for quick start)
+- **AWS ECS/Fargate** - Enterprise container orchestration
+- **Google Cloud Run** - Serverless container platform
+- **Azure Container Instances** - Microsoft cloud deployment
+- **Render** - Modern full-stack hosting
 
-### Quick Deployment Commands
+#### 🔄 Automated Workflows
+- **Staging**: Auto-deploy from `develop` branch
+- **Production**: Deploy on GitHub releases
+- **Notifications**: Slack/Discord deployment alerts
+- **Monitoring**: Sentry error tracking integration
+
+### 🛠️ Quick Setup
+
+#### 1. Configure Deployment Secrets
 ```bash
-# Build and test locally
-./scripts/docker-build.sh --tag latest
+# Interactive setup script
+./scripts/setup-github-secrets.sh
 
-# Deploy to staging
-./scripts/deploy.sh --environment staging --tag latest
-
-# Deploy to production
-./scripts/deploy.sh --environment production --tag v1.0.0
-
-# Deploy with Kubernetes
-kubectl apply -f k8s/
+# Manual setup with GitHub CLI
+gh secret set RAILWAY_TOKEN --body "your_railway_token"
+gh secret set MATWEBAPI_KEY --body "your_matwebapi_key"
 ```
 
-For detailed setup instructions, see [CI/CD Setup Guide](docs/CICD_SETUP.md).
+#### 2. Deploy to Staging
+```bash
+# Push to develop branch triggers staging deployment
+git checkout -b develop
+git push origin develop
+```
+
+#### 3. Deploy to Production
+```bash
+# Create release triggers production deployment
+gh release create v1.0.0 --title "MatTailor AI v1.0.0"
+```
+
+### 📋 Deployment Checklist
+- [ ] Configure repository secrets ([Quick Reference](docs/SECRETS_QUICK_REFERENCE.md))
+- [ ] Set up cloud platform credentials
+- [ ] Configure external API keys (MatWeb, Materials Project)
+- [ ] Test deployment pipeline
+- [ ] Set up monitoring and alerts
+
+### 🔍 Pipeline Monitoring
+```bash
+# View deployment status
+gh workflow list
+
+# Monitor specific deployment
+gh run watch
+
+# View deployment logs
+gh run view --log
+
+# Validate secrets configuration
+gh workflow run validate-secrets.yml
+```
+
+### 📚 Documentation
+- **[GitHub Secrets Setup](docs/GITHUB_SECRETS.md)** - Complete secrets configuration guide
+- **[Quick Reference](docs/SECRETS_QUICK_REFERENCE.md)** - Essential secrets checklist
+- **[CI/CD Setup](docs/CICD_SETUP.md)** - Pipeline configuration details
+- **[Deployment Guide](DEPLOYMENT.md)** - Manual deployment options
+
+## 🐳 Docker Development
 
 ## Cloud Deployment
 

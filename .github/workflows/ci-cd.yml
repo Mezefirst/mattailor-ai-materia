@@ -139,12 +139,12 @@ jobs:
         with:
           sarif_file: 'trivy-image-results.sarif'
 
-  # Deploy to staging
-  deploy-staging:
-    name: Deploy to Staging
+  # Deploy to Railway (staging)
+  deploy-railway-staging:
+    name: Deploy to Railway (Staging)
     runs-on: ubuntu-latest
     needs: [build-and-push, container-scan]
-    if: github.ref == 'refs/heads/develop'
+    if: github.ref == 'refs/heads/develop' && secrets.RAILWAY_TOKEN != ''
     environment:
       name: staging
       url: https://staging.mattailor.ai
@@ -152,18 +152,77 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy to staging
-        run: |
-          echo "Deploying to staging environment..."
-          # Add your staging deployment commands here
-          # Example: kubectl set image deployment/mattailor-frontend container=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
 
-  # Deploy to production
-  deploy-production:
-    name: Deploy to Production
+      - name: Deploy to Railway
+        run: |
+          railway login --token ${{ secrets.RAILWAY_TOKEN }}
+          railway environment staging
+          railway up --service mattailor-frontend
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+  # Deploy to AWS ECS (staging)
+  deploy-aws-staging:
+    name: Deploy to AWS ECS (Staging)
     runs-on: ubuntu-latest
     needs: [build-and-push, container-scan]
-    if: github.event_name == 'release'
+    if: github.ref == 'refs/heads/develop' && secrets.AWS_ACCESS_KEY_ID != ''
+    environment:
+      name: staging
+      url: https://staging.mattailor.ai
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Update ECS service
+        run: |
+          aws ecs update-service \
+            --cluster ${{ secrets.ECS_CLUSTER_NAME || 'mattailor-staging' }} \
+            --service ${{ secrets.ECS_SERVICE_NAME || 'mattailor-frontend' }} \
+            --force-new-deployment
+
+  # Deploy to GCP Cloud Run (staging)
+  deploy-gcp-staging:
+    name: Deploy to GCP Cloud Run (Staging)
+    runs-on: ubuntu-latest
+    needs: [build-and-push, container-scan]
+    if: github.ref == 'refs/heads/develop' && secrets.GCP_SA_KEY != ''
+    environment:
+      name: staging
+      url: https://staging.mattailor.ai
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy mattailor-frontend \
+            --image ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            --platform managed \
+            --region us-central1 \
+            --allow-unauthenticated
+
+  # Deploy to production (Railway)
+  deploy-railway-production:
+    name: Deploy to Railway (Production)
+    runs-on: ubuntu-latest
+    needs: [build-and-push, container-scan]
+    if: github.event_name == 'release' && secrets.RAILWAY_TOKEN != ''
     environment:
       name: production
       url: https://mattailor.ai
@@ -171,18 +230,134 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy to production
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy to Railway
         run: |
-          echo "Deploying to production environment..."
-          # Add your production deployment commands here
-          # Example: kubectl set image deployment/mattailor-frontend container=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.event.release.tag_name }}
+          railway login --token ${{ secrets.RAILWAY_TOKEN }}
+          railway environment production
+          railway up --service mattailor-frontend
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+  # Deploy to AWS ECS (production)
+  deploy-aws-production:
+    name: Deploy to AWS ECS (Production)
+    runs-on: ubuntu-latest
+    needs: [build-and-push, container-scan]
+    if: github.event_name == 'release' && secrets.AWS_ACCESS_KEY_ID != ''
+    environment:
+      name: production
+      url: https://mattailor.ai
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Update ECS service
+        run: |
+          aws ecs update-service \
+            --cluster ${{ secrets.ECS_CLUSTER_NAME || 'mattailor-production' }} \
+            --service ${{ secrets.ECS_SERVICE_NAME || 'mattailor-frontend' }} \
+            --force-new-deployment
+
+  # Deploy to GCP Cloud Run (production)
+  deploy-gcp-production:
+    name: Deploy to GCP Cloud Run (Production)
+    runs-on: ubuntu-latest
+    needs: [build-and-push, container-scan]
+    if: github.event_name == 'release' && secrets.GCP_SA_KEY != ''
+    environment:
+      name: production
+      url: https://mattailor.ai
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy mattailor-frontend \
+            --image ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.event.release.tag_name }} \
+            --platform managed \
+            --region us-central1 \
+            --allow-unauthenticated
+
+  # Send deployment notifications
+  notify-deployment:
+    name: Send Deployment Notifications
+    runs-on: ubuntu-latest
+    needs: [deploy-railway-staging, deploy-aws-staging, deploy-gcp-staging, deploy-railway-production, deploy-aws-production, deploy-gcp-production]
+    if: always() && (contains(needs.*.result, 'success') || contains(needs.*.result, 'failure'))
+    steps:
+      - name: Send Slack notification
+        if: secrets.SLACK_WEBHOOK_URL != ''
+        run: |
+          if [[ "${{ contains(needs.*.result, 'success') }}" == "true" ]]; then
+            STATUS="✅ Success"
+            COLOR="good"
+          else
+            STATUS="❌ Failed"
+            COLOR="danger"
+          fi
+          
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{
+              \"attachments\": [{
+                \"color\": \"$COLOR\",
+                \"title\": \"MatTailor AI Deployment $STATUS\",
+                \"text\": \"Deployment completed for commit ${{ github.sha }}\",
+                \"fields\": [
+                  {\"title\": \"Environment\", \"value\": \"${{ github.ref == 'refs/heads/develop' && 'Staging' || 'Production' }}\", \"short\": true},
+                  {\"title\": \"Commit\", \"value\": \"${{ github.sha }}\", \"short\": true}
+                ]
+              }]
+            }" \
+            ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Send Discord notification
+        if: secrets.DISCORD_WEBHOOK_URL != ''
+        run: |
+          if [[ "${{ contains(needs.*.result, 'success') }}" == "true" ]]; then
+            COLOR=65280
+            STATUS="✅ Deployment Successful"
+          else
+            COLOR=16711680
+            STATUS="❌ Deployment Failed"
+          fi
+          
+          curl -H "Content-Type: application/json" \
+            -d "{
+              \"embeds\": [{
+                \"title\": \"$STATUS\",
+                \"description\": \"MatTailor AI deployment completed\",
+                \"color\": $COLOR,
+                \"fields\": [
+                  {\"name\": \"Environment\", \"value\": \"${{ github.ref == 'refs/heads/develop' && 'Staging' || 'Production' }}\", \"inline\": true},
+                  {\"name\": \"Commit\", \"value\": \"${{ github.sha }}\", \"inline\": true}
+                ]
+              }]
+            }" \
+            ${{ secrets.DISCORD_WEBHOOK_URL }}
 
   # Cleanup old images
   cleanup:
     name: Cleanup Old Images
     runs-on: ubuntu-latest
-    needs: [deploy-staging, deploy-production]
-    if: always() && (needs.deploy-staging.result == 'success' || needs.deploy-production.result == 'success')
+    needs: [deploy-railway-staging, deploy-aws-staging, deploy-gcp-staging, deploy-railway-production, deploy-aws-production, deploy-gcp-production]
+    if: always() && contains(needs.*.result, 'success')
     steps:
       - name: Delete old container images
         uses: actions/delete-package-versions@v5
