@@ -55,9 +55,8 @@ jobs:
             --cache-from type=gha \
             --cache-to type=gha,mode=max \
             --file ./Dockerfile.backend \
-            --tag ghcr.io/mezefirst/mattailor-ai-materia-backend:${IMAGE_TAG} \
-      - name: Build Docker image
-        run: docker buildx build --platform linux/amd64 --tag ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} .
+            --tag ghcr.io/mezefirst/mattailor-ai-materia-backend:${IMAGE_TAG} \ .
+       
         
       - name: Extract metadata
         id: meta
