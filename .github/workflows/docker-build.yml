@@ -45,7 +45,18 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set image tag
+        run: echo "IMAGE_TAG=${GITHUB_SHA::7}" >> $GITHUB_ENV
 
+      - name: Build and push Docker image
+        run: |
+          docker buildx build \
+            --build-arg BUILDKIT_INLINE_CACHE=1 \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
+            --file ./Dockerfile.backend \
+            --tag ghcr.io/mezefirst/mattailor-ai-materia-backend:${IMAGE_TAG} \
+      
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
