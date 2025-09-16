@@ -31,4 +31,10 @@ pids
 .file-manifest
 .devcontainer/
 
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
 .spark-workbench-id

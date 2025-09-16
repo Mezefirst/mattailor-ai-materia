@@ -7,20 +7,17 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
+# Install dependencies (includes TypeScript as dev dependency)
 RUN npm install
-# RUN npm ci --only=production
-RUN npm install -g typescript
-
 
 # Copy source code
 COPY . .
 
-# Build arguments for API keys
-ARG MATWEB_API_KEY
-ARG MATERIALS_PROJECT_API_KEY
+# Build arguments for API keys (optional)
+ARG MATWEB_API_KEY=""
+ARG MATERIALS_PROJECT_API_KEY=""
 
-# Set environment variables for build
+# Set environment variables for build (optional)
 ENV VITE_MATWEB_API_KEY=$MATWEB_API_KEY
 ENV VITE_MATERIALS_PROJECT_API_KEY=$MATERIALS_PROJECT_API_KEY
 
@@ -33,8 +30,8 @@ FROM nginx:alpine
 # Copy built assets from builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Copy nginx configuration
-COPY nginx.conf /etc/nginx/nginx.conf
+# Copy nginx configuration if it exists
+COPY nginx.conf /etc/nginx/nginx.conf 2>/dev/null || echo "Using default nginx config"
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \

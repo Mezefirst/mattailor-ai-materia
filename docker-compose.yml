@@ -6,8 +6,9 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        MATWEB_API_KEY: ${MATWEB_API_KEY}
-        MATERIALS_PROJECT_API_KEY: ${MATERIALS_PROJECT_API_KEY}
+        # API keys are now optional - application works without them
+        MATWEB_API_KEY: ${MATWEB_API_KEY:-}
+        MATERIALS_PROJECT_API_KEY: ${MATERIALS_PROJECT_API_KEY:-}
     ports:
       - "3000:80"
     environment:
@@ -15,6 +16,27 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Backend service
+  mattailor-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - CORS_ORIGINS=http://localhost:3000
+      # API keys are optional
+      - MATWEBAPI_KEY=${MATWEB_API_KEY:-}
+      - MP_API_KEY=${MATERIALS_PROJECT_API_KEY:-}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3

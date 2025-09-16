@@ -21,9 +21,9 @@ class MaterialDatabase:
     def _initialize_sample_data(self):
         """Initialize with sample material data for demonstration"""
         
-        # Sample materials covering different categories
+        # Comprehensive sample materials covering different categories
         sample_materials = [
-            # Metals
+            # Metals - Expanded selection
             {
                 'id': 'steel_316l',
                 'name': 'Stainless Steel 316L',
@@ -43,7 +43,52 @@ class MaterialDatabase:
                 'carbon_footprint': 3.2,
                 'availability_score': 9.0,
                 'manufacturing_complexity': 4.0,
-                'lead_time_days': 14
+                'lead_time_days': 14,
+                'data_source': 'Local Database'
+            },
+            {
+                'id': 'steel_304',
+                'name': 'Stainless Steel 304',
+                'category': MaterialCategory.METAL,
+                'composition': {'Fe': 70.0, 'Cr': 18.0, 'Ni': 8.0, 'Mn': 2.0, 'C': 0.08},
+                'tensile_strength': 515.0,
+                'yield_strength': 205.0,
+                'elastic_modulus': 200.0,
+                'density': 8.0,
+                'melting_point': 1400.0,
+                'thermal_conductivity': 16.2,
+                'electrical_conductivity': 1.45e6,
+                'corrosion_resistance': 8.5,
+                'cost_per_kg': 6.20,
+                'sustainability_score': 7.0,
+                'recyclability': 9.5,
+                'carbon_footprint': 2.8,
+                'availability_score': 9.5,
+                'manufacturing_complexity': 3.5,
+                'lead_time_days': 10,
+                'data_source': 'Local Database'
+            },
+            {
+                'id': 'steel_a36',
+                'name': 'Carbon Steel A36',
+                'category': MaterialCategory.METAL,
+                'composition': {'Fe': 98.0, 'C': 0.26, 'Mn': 1.03, 'P': 0.04, 'S': 0.05},
+                'tensile_strength': 400.0,
+                'yield_strength': 250.0,
+                'elastic_modulus': 200.0,
+                'density': 7.85,
+                'melting_point': 1425.0,
+                'thermal_conductivity': 50.2,
+                'electrical_conductivity': 1.0e7,
+                'corrosion_resistance': 3.0,
+                'cost_per_kg': 2.50,
+                'sustainability_score': 5.5,
+                'recyclability': 9.5,
+                'carbon_footprint': 2.5,
+                'availability_score': 10.0,
+                'manufacturing_complexity': 2.0,
+                'lead_time_days': 5,
+                'data_source': 'Local Database'
             },
             {
                 'id': 'aluminum_6061',
@@ -64,7 +109,30 @@ class MaterialDatabase:
                 'carbon_footprint': 1.8,
                 'availability_score': 9.5,
                 'manufacturing_complexity': 3.0,
-                'lead_time_days': 7
+                'lead_time_days': 7,
+                'data_source': 'Local Database'
+            },
+            {
+                'id': 'aluminum_7075',
+                'name': 'Aluminum 7075-T6',
+                'category': MaterialCategory.METAL,
+                'composition': {'Al': 87.1, 'Zn': 5.6, 'Mg': 2.5, 'Cu': 1.6, 'Cr': 0.23},
+                'tensile_strength': 572.0,
+                'yield_strength': 503.0,
+                'elastic_modulus': 71.7,
+                'density': 2.81,
+                'melting_point': 635.0,
+                'thermal_conductivity': 130.0,
+                'electrical_conductivity': 1.8e7,
+                'corrosion_resistance': 6.0,
+                'cost_per_kg': 6.80,
+                'sustainability_score': 7.5,
+                'recyclability': 9.0,
+                'carbon_footprint': 2.1,
+                'availability_score': 8.5,
+                'manufacturing_complexity': 4.5,
+                'lead_time_days': 12,
+                'data_source': 'Local Database'
             },
             {
                 'id': 'titanium_grade2',
@@ -85,10 +153,55 @@ class MaterialDatabase:
                 'carbon_footprint': 12.5,
                 'availability_score': 7.0,
                 'manufacturing_complexity': 7.0,
-                'lead_time_days': 21
+                'lead_time_days': 21,
+                'data_source': 'Local Database'
+            },
+            {
+                'id': 'titanium_grade5',
+                'name': 'Titanium Grade 5 (Ti-6Al-4V)',
+                'category': MaterialCategory.METAL,
+                'composition': {'Ti': 90.0, 'Al': 6.0, 'V': 4.0},
+                'tensile_strength': 950.0,
+                'yield_strength': 880.0,
+                'elastic_modulus': 114.0,
+                'density': 4.43,
+                'melting_point': 1604.0,
+                'thermal_conductivity': 6.7,
+                'electrical_conductivity': 1.8e6,
+                'corrosion_resistance': 9.0,
+                'cost_per_kg': 55.00,
+                'sustainability_score': 5.0,
+                'recyclability': 7.5,
+                'carbon_footprint': 15.2,
+                'availability_score': 6.5,
+                'manufacturing_complexity': 8.5,
+                'lead_time_days': 28,
+                'data_source': 'Local Database'
+            },
+            {
+                'id': 'copper_c101',
+                'name': 'Oxygen-Free Copper C101',
+                'category': MaterialCategory.METAL,
+                'composition': {'Cu': 99.99, 'O': 0.001},
+                'tensile_strength': 220.0,
+                'yield_strength': 69.0,
+                'elastic_modulus': 110.0,
+                'density': 8.96,
+                'melting_point': 1085.0,
+                'thermal_conductivity': 401.0,
+                'electrical_conductivity': 5.96e7,
+                'corrosion_resistance': 7.5,
+                'cost_per_kg': 9.50,
+                'sustainability_score': 6.0,
+                'recyclability': 9.8,
+                'carbon_footprint': 3.8,
+                'availability_score': 8.5,
+                'manufacturing_complexity': 3.0,
+                'lead_time_days': 8,
+                'data_source': 'Local Database'
             },
             
-            # Polymers
+            # Polymers - Expanded selection
             {
                 'id': 'peek',
                 'name': 'PEEK (Polyetheretherketone)',
@@ -108,7 +221,8 @@ class MaterialDatabase:
                 'carbon_footprint': 8.2,
                 'availability_score': 8.0,
                 'manufacturing_complexity': 6.0,
-                'lead_time_days': 28
+                'lead_time_days': 28,
+                'data_source': 'Local Database'
             },
             {
                 'id': 'nylon_66',
@@ -129,10 +243,77 @@ class MaterialDatabase:
                 'carbon_footprint': 5.8,
                 'availability_score': 9.0,
                 'manufacturing_complexity': 3.0,
-                'lead_time_days': 10
+                'lead_time_days': 10,
+                'data_source': 'Local Database'
+            },
+            {
+                'id': 'abs',
+                'name': 'ABS (Acrylonitrile Butadiene Styrene)',
+                'category': MaterialCategory.POLYMER,
+                'composition': {'C': 85.7, 'H': 9.6, 'N': 4.7},
+                'tensile_strength': 40.0,
+                'yield_strength': 35.0,
+                'elastic_modulus': 2.0,
+                'density': 1.05,
+                'melting_point': 210.0,
+                'thermal_conductivity': 0.18,
+                'electrical_conductivity': 1e-16,
+                'chemical_stability': 6.5,
+                'cost_per_kg': 2.80,
+                'sustainability_score': 4.5,
+                'recyclability': 8.0,
+                'carbon_footprint': 4.2,
+                'availability_score': 9.5,
+                'manufacturing_complexity': 2.5,
+                'lead_time_days': 7,
+                'data_source': 'Local Database'
+            },
+            {
+                'id': 'pla',
+                'name': 'PLA (Polylactic Acid)',
+                'category': MaterialCategory.POLYMER,
+                'composition': {'C': 50.0, 'H': 5.6, 'O': 44.4},
+                'tensile_strength': 50.0,
+                'yield_strength': 45.0,
+                'elastic_modulus': 3.5,
+                'density': 1.24,
+                'melting_point': 175.0,
+                'thermal_conductivity': 0.13,
+                'electrical_conductivity': 1e-14,
+                'chemical_stability': 5.0,
+                'cost_per_kg': 3.20,
+                'sustainability_score': 9.0,
+                'recyclability': 9.5,
+                'carbon_footprint': 1.8,
+                'availability_score': 8.5,
+                'manufacturing_complexity': 2.0,
+                'lead_time_days': 5,
+                'data_source': 'Local Database'
+            },
+            {
+                'id': 'pc',
+                'name': 'Polycarbonate (PC)',
+                'category': MaterialCategory.POLYMER,
+                'composition': {'C': 75.6, 'H': 5.6, 'O': 18.8},
+                'tensile_strength': 65.0,
+                'yield_strength': 62.0,
+                'elastic_modulus': 2.4,
+                'density': 1.20,
+                'melting_point': 267.0,
+                'thermal_conductivity': 0.20,
+                'electrical_conductivity': 1e-15,
+                'chemical_stability': 7.5,
+                'cost_per_kg': 4.80,
+                'sustainability_score': 5.0,
+                'recyclability': 7.5,
+                'carbon_footprint': 6.2,
+                'availability_score': 9.0,
+                'manufacturing_complexity': 3.5,
+                'lead_time_days': 8,
+                'data_source': 'Local Database'
             },
             
-            # Ceramics
+            # Ceramics - Expanded selection
             {
                 'id': 'alumina_99',
                 'name': 'Alumina 99%',
@@ -153,10 +334,57 @@ class MaterialDatabase:
                 'carbon_footprint': 4.5,
                 'availability_score': 8.5,
                 'manufacturing_complexity': 8.0,
-                'lead_time_days': 35
+                'lead_time_days': 35,
+                'data_source': 'Local Database'
+            },
+            {
+                'id': 'silicon_carbide',
+                'name': 'Silicon Carbide (SiC)',
+                'category': MaterialCategory.CERAMIC,
+                'composition': {'SiC': 100.0},
+                'tensile_strength': 550.0,
+                'elastic_modulus': 410.0,
+                'hardness': 2500.0,
+                'density': 3.21,
+                'melting_point': 2730.0,
+                'thermal_conductivity': 120.0,
+                'electrical_conductivity': 1e2,
+                'dielectric_constant': 40.0,
+                'chemical_stability': 9.8,
+                'cost_per_kg': 25.00,
+                'sustainability_score': 6.5,
+                'recyclability': 2.5,
+                'carbon_footprint': 8.2,
+                'availability_score': 7.5,
+                'manufacturing_complexity': 9.0,
+                'lead_time_days': 42,
+                'data_source': 'Local Database'
+            },
+            {
+                'id': 'zirconia',
+                'name': 'Zirconia (ZrO2)',
+                'category': MaterialCategory.CERAMIC,
+                'composition': {'ZrO2': 97.0, 'Y2O3': 3.0},
+                'tensile_strength': 900.0,
+                'elastic_modulus': 200.0,
+                'hardness': 1200.0,
+                'density': 6.05,
+                'melting_point': 2715.0,
+                'thermal_conductivity': 2.0,
+                'electrical_conductivity': 1e-14,
+                'dielectric_constant': 25.0,
+                'chemical_stability': 9.5,
+                'cost_per_kg': 18.00,
+                'sustainability_score': 6.0,
+                'recyclability': 2.0,
+                'carbon_footprint': 6.8,
+                'availability_score': 7.0,
+                'manufacturing_complexity': 8.5,
+                'lead_time_days': 38,
+                'data_source': 'Local Database'
             },
             
-            # Composites
+            # Composites - Expanded selection
             {
                 'id': 'carbon_fiber_epoxy',
                 'name': 'Carbon Fiber/Epoxy Composite',
@@ -172,7 +400,8 @@ class MaterialDatabase:
                 'carbon_footprint': 18.5,
                 'availability_score': 7.5,
                 'manufacturing_complexity': 9.0,
-                'lead_time_days': 42
+                'lead_time_days': 42,
+                'data_source': 'Local Database'
             },
             {
                 'id': 'fiberglass_composite',
@@ -189,7 +418,72 @@ class MaterialDatabase:
                 'carbon_footprint': 7.2,
                 'availability_score': 9.0,
                 'manufacturing_complexity': 5.0,
-                'lead_time_days': 21
+                'lead_time_days': 21,
+                'data_source': 'Local Database'
+            },
+            {
+                'id': 'kevlar_epoxy',
+                'name': 'Kevlar/Epoxy Composite',
+                'category': MaterialCategory.COMPOSITE,
+                'composition': {'Kevlar_Fiber': 60.0, 'Epoxy_Resin': 40.0},
+                'tensile_strength': 1400.0,
+                'elastic_modulus': 76.0,
+                'density': 1.38,
+                'thermal_conductivity': 0.04,
+                'cost_per_kg': 120.00,
+                'sustainability_score': 3.0,
+                'recyclability': 1.5,
+                'carbon_footprint': 25.8,
+                'availability_score': 6.5,
+                'manufacturing_complexity': 8.5,
+                'lead_time_days': 45,
+                'data_source': 'Local Database'
+            },
+            
+            # Semiconductors
+            {
+                'id': 'silicon',
+                'name': 'Silicon (Si)',
+                'category': MaterialCategory.SEMICONDUCTOR,
+                'composition': {'Si': 100.0},
+                'tensile_strength': None,
+                'elastic_modulus': 130.0,
+                'hardness': 1000.0,
+                'density': 2.33,
+                'melting_point': 1414.0,
+                'thermal_conductivity': 149.0,
+                'electrical_conductivity': 1.56e-3,
+                'dielectric_constant': 11.7,
+                'cost_per_kg': 15.00,
+                'sustainability_score': 6.0,
+                'recyclability': 8.0,
+                'carbon_footprint': 12.5,
+                'availability_score': 8.0,
+                'manufacturing_complexity': 9.5,
+                'lead_time_days': 60,
+                'data_source': 'Local Database'
+            },
+            {
+                'id': 'gallium_arsenide',
+                'name': 'Gallium Arsenide (GaAs)',
+                'category': MaterialCategory.SEMICONDUCTOR,
+                'composition': {'Ga': 48.2, 'As': 51.8},
+                'tensile_strength': None,
+                'elastic_modulus': 85.0,
+                'hardness': 750.0,
+                'density': 5.32,
+                'melting_point': 1238.0,
+                'thermal_conductivity': 55.0,
+                'electrical_conductivity': 1e-8,
+                'dielectric_constant': 13.1,
+                'cost_per_kg': 2500.00,
+                'sustainability_score': 3.0,
+                'recyclability': 6.0,
+                'carbon_footprint': 45.2,
+                'availability_score': 5.0,
+                'manufacturing_complexity': 10.0,
+                'lead_time_days': 90,
+                'data_source': 'Local Database'
             }
         ]
         
