@@ -30,8 +30,8 @@ FROM nginx:alpine
 # Copy built assets from builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Copy nginx configuration if it exists
-COPY nginx.conf /etc/nginx/nginx.conf 2>/dev/null || echo "Using default nginx config"
+# Copy nginx configuration
+COPY nginx.conf /etc/nginx/nginx.conf
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \

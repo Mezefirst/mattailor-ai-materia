@@ -21,10 +21,16 @@
 - **Environmental Modeling**: Account for operating conditions and constraints
 
 ### 🌍 Comprehensive Material Database
-- **Multi-Category Coverage**: Metals, polymers, ceramics, composites, semiconductors
+- **20+ Materials**: Metals, polymers, ceramics, composites, semiconductors  
+- **Local Database**: Works offline without external API dependencies
 - **Real Supplier Data**: Local and global supplier networks with pricing
 - **Sustainability Metrics**: Lifecycle impact, recyclability, carbon footprint
 - **Manufacturing Guidance**: Process recommendations and complexity ratings
+
+### 🔗 Optional External Integrations
+- **MatWeb Database**: Access to 150,000+ materials (API key optional)
+- **Materials Project**: Scientific material data (API key optional)
+- **Enhanced AI**: OpenAI integration for advanced recommendations (optional)
 
 ### 📱 Progressive Web App
 - **Offline Functionality**: Work without internet connection
@@ -34,29 +40,41 @@
 
 ## 🚀 Quick Start
 
-### Development Setup
+**✨ NEW: No API keys required! MatTailor AI now works out-of-the-box with a comprehensive local material database.**
 
-#### Backend (FastAPI)
-```bash
-cd backend
-pip install -r requirements.txt
-python main.py
-```
+### Development Setup
 
 #### Frontend (React PWA)
 ```bash
 npm install
 npm run dev
 ```
+Access the application at `http://localhost:5000`
 
-Access the application at `http://localhost:5173`
+#### Backend (FastAPI) - Optional
+```bash
+cd backend
+pip install -r requirements.txt
+python main.py
+```
+Backend API available at `http://localhost:8000`
+
+### 🐳 Docker Deployment (Recommended)
+
+```bash
+# Clone and deploy
+git clone https://github.com/Mezefirst/mattailor-ai-materia.git
+cd mattailor-ai-materia
+docker-compose up -d
+```
+Application will be available at `http://localhost:3000`
 
 ### Production Deployment
 
 #### Quick Deploy Options
-- **Frontend**: Deploy to [Vercel](https://vercel.com) or [Netlify](https://netlify.com)
+- **Docker**: `docker-compose up -d` (works without any configuration)
+- **Frontend**: Deploy to [Vercel](https://vercel.com) or [Netlify](https://netlify.com)  
 - **Backend**: Deploy to [Railway](https://railway.app) or [Heroku](https://heroku.com)
-- **Full Stack**: Use Docker Compose
 
 See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed deployment instructions.
 
@@ -149,21 +167,29 @@ const properties = await apiService.simulateCustomMaterial(
 
 ### Environment Variables
 
-#### Frontend (.env)
-```
-VITE_API_URL=http://localhost:8000
-VITE_ENVIRONMENT=development
+#### Basic Configuration (No API keys required)
+```bash
+# .env
+NODE_ENV=development
 VITE_APP_NAME=MatTailor AI
+VITE_APP_VERSION=1.0.0
 ```
 
-#### Backend (.env)
-```
-ENVIRONMENT=development
-SECRET_KEY=your-secret-key
-OPENAI_API_KEY=your-openai-key
+#### Optional External Integrations
+```bash
+# Optional: Enhance with external databases
+MATWEB_API_KEY=your_matweb_api_key_here
+MATERIALS_PROJECT_API_KEY=your_materials_project_api_key_here
+
+# Optional: AI enhancements  
+OPENAI_API_KEY=your_openai_api_key_here
+
+# Optional: Database and caching
 DATABASE_URL=postgresql://user:pass@localhost/mattailor
-CORS_ORIGINS=["http://localhost:3000"]
+REDIS_URL=redis://localhost:6379
 ```
+
+**Note**: All API keys are optional. The application provides full functionality using the local material database.
 
 ## 🧪 Testing
 

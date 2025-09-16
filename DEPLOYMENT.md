@@ -1,52 +1,183 @@
 # MatTailor AI - Deployment Guide
 
-This guide covers automated deployment configuration for MatTailor AI using GitHub Actions, Docker, and Kubernetes.
+This guide covers deployment configuration for MatTailor AI using Docker and optional external integrations.
 
-## 🔐 GitHub Repository Secrets
+## 🚀 Quick Start (No API Keys Required)
 
-### Required Secrets
+MatTailor AI now works perfectly without any external API keys using a comprehensive local material database.
 
-Configure these secrets in your GitHub repository (`Settings > Secrets and variables > Actions`):
+### Development Setup
+```bash
+# Frontend
+npm install
+npm run dev
 
-| Secret Name | Description | Required |
-|-------------|-------------|----------|
-| `MATWEB_API_KEY` | API key for MatWeb material database | Yes |
-| `MATERIALS_PROJECT_API_KEY` | API key for Materials Project database | Yes |
+# Backend (optional)
+cd backend
+pip install -r requirements.txt
+python main.py
+```
+
+### Docker Deployment
+```bash
+# Basic deployment (no API keys needed)
+docker-compose up
+
+# Or build individual services
+docker build -t mattailor-ai .
+docker run -p 3000:80 mattailor-ai
+```
+
+## 🔐 Optional API Integrations
+
+### External Material Databases (Optional)
+
+Configure these environment variables for enhanced material data:
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `MATWEB_API_KEY` | API key for MatWeb material database | Optional |
+| `MATERIALS_PROJECT_API_KEY` | API key for Materials Project database | Optional |
 | `OPENAI_API_KEY` | OpenAI API key for AI recommendations | Optional |
-| `SNYK_TOKEN` | Snyk token for security scanning | Optional |
-| `DATABASE_URL` | PostgreSQL database URL | Optional |
-| `REDIS_URL` | Redis cache URL | Optional |
 
-### Quick Setup
+### Setting API Keys
 
-Run the setup script to configure secrets interactively:
-
+#### Environment Variables
 ```bash
-./scripts/setup-secrets.sh
+# .env file
+MATWEB_API_KEY=your_matweb_api_key_here
+MATERIALS_PROJECT_API_KEY=your_materials_project_api_key_here
 ```
 
-Or set them manually using GitHub CLI:
-
+#### Docker Compose with API Keys
 ```bash
-gh secret set MATWEB_API_KEY --body "your-api-key-here"
-gh secret set MATERIALS_PROJECT_API_KEY --body "your-api-key-here"
+# Set environment variables
+export MATWEB_API_KEY="your-key-here"
+export MATERIALS_PROJECT_API_KEY="your-key-here"
+
+# Deploy with API integration
+docker-compose up
 ```
 
-## 🚀 Automated CI/CD Pipeline
+## 🏗️ Production Deployment
 
-The pipeline is triggered on:
-- Push to `main` or `develop` branches
-- Pull requests to `main`
-- Release publication
+### Docker Production Setup
+```bash
+# Production build with optional API keys
+docker build \
+  --build-arg MATWEB_API_KEY="${MATWEB_API_KEY:-}" \
+  --build-arg MATERIALS_PROJECT_API_KEY="${MATERIALS_PROJECT_API_KEY:-}" \
+  -t mattailor-ai:latest .
 
-### Pipeline Stages
+# Run production container
+docker run -d \
+  --name mattailor-ai \
+  -p 80:80 \
+  --restart unless-stopped \
+  mattailor-ai:latest
+```
 
-1. **Test** - Run unit tests, linting, and build validation
-2. **Build & Push** - Build Docker image and push to GitHub Container Registry
-3. **Deploy Staging** - Auto-deploy `develop` branch to staging
-4. **Deploy Production** - Auto-deploy `main` branch to production
+### Multi-Service Deployment
+```bash
+# Deploy both frontend and backend
+docker-compose -f docker-compose.yml up -d
+```
 
-### Workflow Files
+## 📊 Features Available
+
+### Without API Keys (Local Database)
+- ✅ 20+ comprehensive materials across all categories
+- ✅ Material search and recommendations  
+- ✅ Property comparison and analysis
+- ✅ Supplier information
+- ✅ Full web application functionality
+- ✅ Docker deployment ready
+
+### With API Keys (External Integrations)
+- ✅ All local features PLUS
+- ✅ Access to 150,000+ materials from MatWeb
+- ✅ Materials Project database integration
+- ✅ Real-time material property data
+- ✅ Enhanced AI recommendations with OpenAI
+
+## 🔧 Configuration
+
+### Environment Variables
+
+#### Application Settings
+```bash
+NODE_ENV=production
+VITE_APP_NAME=MatTailor AI
+VITE_APP_VERSION=1.0.0
+```
+
+#### Optional Database Integration
+```bash
+DATABASE_URL=postgresql://user:password@localhost:5432/mattailor_ai
+REDIS_URL=redis://localhost:6379
+```
+
+### Health Checks
+
+The application includes built-in health checks:
+- Frontend: `http://localhost:3000/health`
+- Backend: `http://localhost:8000/health`
+
+## 🐳 Docker Configuration
+
+### Multi-stage Production Build
+The Dockerfile uses multi-stage builds for optimal size and security:
+1. **Builder stage**: Installs dependencies and builds the application
+2. **Production stage**: Lightweight nginx serving optimized static files
+
+### Security Features
+- Non-root user execution
+- Minimal attack surface
+- Health check monitoring
+- Resource limits
+
+## 📈 Monitoring
+
+### Built-in Metrics
+- Application performance
+- Material database statistics
+- API integration status
+- Error tracking
+
+### Logging
+Structured JSON logging with:
+- Request/response tracking  
+- Performance metrics
+- Error details
+- Security events
+
+## 🔍 Troubleshooting
+
+### Common Issues
+
+**Build fails with TypeScript errors:**
+```bash
+# Clear cache and reinstall
+npm cache clean --force
+rm -rf node_modules package-lock.json
+npm install
+```
+
+**Docker build fails:**
+```bash
+# Build without cache
+docker build --no-cache -t mattailor-ai .
+```
+
+**Application not loading materials:**
+- Check browser console for errors
+- Verify network connectivity
+- Check API key configuration (if using external APIs)
+
+### Getting Help
+1. Check the [GitHub Issues](https://github.com/mattailor-ai/issues)
+2. Review application logs
+3. Verify configuration settings
 
 - `.github/workflows/ci-cd.yml` - Main CI/CD pipeline
 - `.github/workflows/security-scan.yml` - Security scanning
