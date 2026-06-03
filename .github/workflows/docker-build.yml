@@ -53,8 +53,8 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend
           tags: |
             type=ref,event=branch
-            type=ref,event=pr
-            type=sha,prefix={{branch}}-
+            type=ref,event=pr,prefix=pr-
+            type=sha,prefix=sha-
             type=raw,value=latest,enable={{is_default_branch}}
             type=raw,value=develop,enable=${{ github.ref == 'refs/heads/develop' }}
             type=raw,value=staging,enable=${{ github.ref == 'refs/heads/staging' }}
@@ -64,7 +64,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./Dockerfile.frontend
+          file: ./Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
@@ -77,7 +77,8 @@ jobs:
       - name: Generate image reference
         id: image
         run: |
-          echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend:${{ github.ref_name }}-${{ github.sha }}" >> $GITHUB_OUTPUT
+          TAG="${{ steps.meta.outputs.tags }}" | head -1
+          echo "image=${TAG}" >> $GITHUB_OUTPUT
 
   build-backend:
     name: Build Backend Image
@@ -109,8 +110,8 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-backend
           tags: |
             type=ref,event=branch
-            type=ref,event=pr
-            type=sha,prefix={{branch}}-
+            type=ref,event=pr,prefix=pr-
+            type=sha,prefix=sha-
             type=raw,value=latest,enable={{is_default_branch}}
             type=raw,value=develop,enable=${{ github.ref == 'refs/heads/develop' }}
             type=raw,value=staging,enable=${{ github.ref == 'refs/heads/staging' }}
@@ -133,12 +134,14 @@ jobs:
       - name: Generate image reference
         id: image
         run: |
-          echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-backend:${{ github.ref_name }}-${{ github.sha }}" >> $GITHUB_OUTPUT
+          TAG="${{ steps.meta.outputs.tags }}" | head -1
+          echo "image=${TAG}" >> $GITHUB_OUTPUT
 
   security-scan:
     name: Security Scan Images
     needs: [build-frontend, build-backend]
     runs-on: ubuntu-latest
+    if: github.event_name == 'push'
     strategy:
       matrix:
         image: 
@@ -150,13 +153,13 @@ jobs:
         with:
           image-ref: ${{ matrix.image }}
           format: 'sarif'
-          output: 'trivy-results-${{ matrix.image }}.sarif'
+          output: 'trivy-results-${{ hashFiles(matrix.image) }}.sarif'
 
       - name: Upload Trivy scan results
         uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
-          sarif_file: 'trivy-results-${{ matrix.image }}.sarif'
+          sarif_file: 'trivy-results-*.sarif'
 
   update-manifests:
     name: Update Kubernetes Manifests
@@ -182,18 +185,12 @@ jobs:
           case "${{ github.ref_name }}" in
             "main")
               ENV="prod"
-              FRONTEND_TAG="${{ github.ref_name }}-${{ github.sha }}"
-              BACKEND_TAG="${{ github.ref_name }}-${{ github.sha }}"
               ;;
             "staging")
               ENV="staging"
-              FRONTEND_TAG="${{ github.ref_name }}-${{ github.sha }}"
-              BACKEND_TAG="${{ github.ref_name }}-${{ github.sha }}"
               ;;
             "develop")
               ENV="dev"
-              FRONTEND_TAG="${{ github.ref_name }}-${{ github.sha }}"
-              BACKEND_TAG="${{ github.ref_name }}-${{ github.sha }}"
               ;;
             *)
               echo "Unknown branch, skipping manifest update"
@@ -205,14 +202,14 @@ jobs:
           
           # Update frontend image
           cd k8s/overlays/$ENV
-          kustomize edit set image mattailor-ai-frontend=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend:$FRONTEND_TAG
+          kustomize edit set image mattailor-ai-frontend=${{ needs.build-frontend.outputs.image }}
           
           # Update backend image
-          kustomize edit set image mattailor-ai-backend=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-backend:$BACKEND_TAG
+          kustomize edit set image mattailor-ai-backend=${{ needs.build-backend.outputs.image }}
           
           echo "Updated images:"
-          echo "Frontend: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend:$FRONTEND_TAG"
-          echo "Backend: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-backend:$BACKEND_TAG"
+          echo "Frontend: ${{ needs.build-frontend.outputs.image }}"
+          echo "Backend: ${{ needs.build-backend.outputs.image }}"
 
       - name: Commit and push changes
         run: |
@@ -248,6 +245,8 @@ jobs:
 
       - name: Trigger ArgoCD sync
         run: |
+          echo "ArgoCD sync triggered for ${{ github.ref_name }}"
+
           # Determine environment and kubectl config
           case "${{ github.ref_name }}" in
             "main")
