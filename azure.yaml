@@ -1,0 +1,17 @@
+site_name: MatTailor AI
+description: Intelligent Material Discovery Platform
+metadata:
+  template: mattailor-ai-azure
+
+services:
+  frontend:
+    project: ./
+    language: js
+    host: staticwebapp
+    dist: dist
+
+  backend:
+    project: backend
+    language: py
+    host: function
+    module: main
