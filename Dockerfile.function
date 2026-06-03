@@ -1,0 +1,24 @@
+# Azure Function App Dockerfile for FastAPI backend
+# This Dockerfile is optimized for Azure Functions Python 3.11 runtime
+
+FROM mcr.microsoft.com/azure-functions/python:4-python3.11-slim
+
+ENV AzureWebJobsScriptRoot=/home/site/wwwroot \
+    AzureFunctionsVersion=4
+
+WORKDIR /home/site/wwwroot
+
+# Copy backend requirements
+COPY backend/requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-for-docker -r requirements.txt
+
+# Copy backend source code
+COPY backend/ .
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost/health || exit 1
+
+EXPOSE 80
